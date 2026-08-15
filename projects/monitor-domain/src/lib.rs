@@ -12,7 +12,8 @@ impl MonitorTarget {
     ///
     /// # Errors
     ///
-    /// Validation errors will be introduced as the learner grows the model.
+    /// Returns [`TargetError`] when the name is blank, the URL is missing a
+    /// scheme or host, or the scheme is not HTTP(S).
     pub fn new(name: impl Into<String>, url: impl Into<String>) -> Result<Self, TargetError> {
         let name = name.into();
         if name.trim().is_empty() {
@@ -23,11 +24,13 @@ impl MonitorTarget {
         let Some((scheme, authority)) = url.split_once("://") else {
             return Err(TargetError::InvalidUrl);
         };
-        if authority.is_empty() || authority.starts_with('/') {
-            return Err(TargetError::InvalidUrl);
-        }
         if !matches!(scheme, "http" | "https") {
             return Err(TargetError::UnsupportedScheme);
+        }
+
+        let host = authority.split(['/', '?', '#']).next().unwrap_or_default();
+        if host.trim().is_empty() {
+            return Err(TargetError::InvalidUrl);
         }
 
         Ok(Self { name, url })

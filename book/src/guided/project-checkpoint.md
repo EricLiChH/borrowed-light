@@ -6,17 +6,37 @@
 - `CheckResult` 拥有一次检查的快照；创建时只借用目标。
 - `CheckHistory` 通过 `record(&mut self, result: CheckResult)` 接管结果，通过 `latest(&self)` 借出最近结果。
 
-运行检查点：
+先运行已经通过的领域模型回归测试：
 
 ```sh
 cargo test -p monitor-domain
 ```
 
-下面不是伪代码，而是 workspace 中实际运行的行为测试：
+## 红灯：亲手接上三个所有权动作
 
-```rust,ignore
-{{#include ../../../projects/monitor-domain/tests/check_history.rs}}
-```
+打开 `projects/monitor-domain/tests/learner_checkpoint.rs`：
+
+1. 先预测 `CheckResult` 在哪一行被移动，哪两处只是借用。
+2. 只删除测试上的 `#[ignore]`，运行下面的命令，确认测试先失败。
+
+   ```sh
+   cargo test -p monitor-domain --test learner_checkpoint
+   ```
+
+3. 实现文件里的 `record_then_borrow_latest`，不要 clone，也不要改变领域模型的公开接口。
+4. 再运行同一命令，直到测试变绿。
+
+<details><summary>提示 1：方向</summary>
+
+`result` 应该进入历史记录；返回值只需要临时查看历史记录。
+
+</details>
+
+<details><summary>提示 2：关键 API</summary>
+
+先调用 `history.record(result)`，再调用 `history.latest()`。前者接收值，后者返回引用。
+
+</details>
 
 观察接口中的三个所有权选择：
 
@@ -25,6 +45,23 @@ let result = CheckResult::reachable(&target, 200); // 借用目标
 history.record(result);                            // 移动结果
 let latest = history.latest();                    // 借用历史
 ```
+
+<details><summary>完成后再看参考解</summary>
+
+函数体的惯用解只有两个动作：
+
+```rust,ignore
+history.record(result);
+history.latest()
+```
+
+同一行为也由仓库的常规行为测试持续验证：
+
+```rust,ignore
+{{#include ../../../projects/monitor-domain/tests/check_history.rs}}
+```
+
+</details>
 
 ## 迁移题
 
@@ -37,4 +74,3 @@ let latest = history.latest();                    // 借用历史
 </details>
 
 完成标准：你能不用“因为编译器规定”这句话，解释测试里三处 move/borrow 的原因。
-

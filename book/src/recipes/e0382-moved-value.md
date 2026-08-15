@@ -1,34 +1,15 @@
 # E0382：值已被移动
 
-## 何时出现
+| 元数据 | 内容 |
+|---|---|
+| 任务 | 判断函数应接管值还是只借用值 |
+| 概念 | ownership、move、borrow |
+| 错误码 | `E0382` |
+| 先修 | `String`、函数参数 |
+| 项目阶段 | 网站健康监测器领域模型 |
 
-一个非 `Copy` 值已经移动到新位置，旧绑定又被使用。
+一个非 `Copy` 值已经移动到新位置，旧绑定又被使用时，会看到 `E0382`。
 
-```rust,compile_fail
-fn main() {
-    let url = String::from("https://example.com");
-    let queued = url;
-    println!("{url} {queued}");
-}
-```
+先判断接口意图：新位置需要长期拥有值就接受 move；只需读取就传 `&T`；两边确实需要独立所有权时才考虑 clone。
 
-## 先判断意图
-
-1. 新位置应该长期拥有值吗？接受 move，停止使用旧绑定。
-2. 函数只需要读取吗？把接口改成 `&T`。
-3. 两边确实都要独立拥有吗？最后才考虑 `.clone()`。
-
-```rust
-fn display(url: &str) {
-    println!("{url}");
-}
-
-fn main() {
-    let url = String::from("https://example.com");
-    display(&url);
-    println!("still owned here: {url}");
-}
-```
-
-返回[所有权样章](../guided/ownership.md#实验一move-把责任一起交出去)。
-
+失败代码、状态图、可运行例和修复取舍统一维护在[所有权样章的 move 实验](../guided/ownership.md#实验一move-把责任一起交出去)。

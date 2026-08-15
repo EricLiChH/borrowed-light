@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
   <title id="title">move 前后的所有权变化</title>
-  <desc id="desc">第一步 target 拥有 MonitorTarget，第二步 enqueue 接收 target，第三步 queue 拥有该值，旧 target 不再可用。</desc>
+  <desc id="desc">第一步 main 中的 target 拥有 MonitorTarget；调用后 main 的旧绑定不可用，enqueue 的 target 参数成为所有者；最后 queue 接管该值。</desc>
   <rect width="960" height="300" fill="#fff"/>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
@@ -20,12 +20,12 @@
   <text x="75" y="135" class="small">拥有 MonitorTarget</text>
 
   <line x1="280" y1="115" x2="415" y2="115" class="arrow"/>
-  <text x="292" y="90" class="small">L16 enqueue(target)</text>
+  <text x="280" y="90" class="small">L16 调用；main::target 失效</text>
 
-  <text x="405" y="35" class="label">L6–L9：所有权转交</text>
-  <rect x="420" y="60" width="220" height="110" class="moved"/>
-  <text x="470" y="100" class="label">target</text>
-  <text x="456" y="135" class="small">旧绑定不可再用</text>
+  <text x="390" y="35" class="label">L5–L9：参数接管所有权</text>
+  <rect x="420" y="60" width="220" height="110" class="box"/>
+  <text x="455" y="100" class="label">enqueue::target</text>
+  <text x="445" y="135" class="small">当前拥有 MonitorTarget</text>
 
   <line x1="660" y1="115" x2="795" y2="115" class="arrow"/>
   <text x="674" y="90" class="small">queue.push(target)</text>
@@ -35,5 +35,5 @@
   <text x="820" y="135" class="small">拥有该值</text>
 
   <text x="40" y="225" class="label">权限结论</text>
-  <text x="40" y="260" class="small">同一时刻只有一个所有者；释放责任最终随值进入 queue。</text>
+  <text x="40" y="260" class="small">所有权依次从 main::target 转给 enqueue::target，再转给 queue；同一时刻只有一个所有者。</text>
 </svg>

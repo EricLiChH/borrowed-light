@@ -1,33 +1,15 @@
 # E0502：借用发生冲突
 
-## 何时出现
+| 元数据 | 内容 |
+|---|---|
+| 任务 | 消除重叠的只读借用与可变借用 |
+| 概念 | immutable borrow、mutable borrow、借用范围 |
+| 错误码 | `E0502` |
+| 先修 | `String`、可变绑定 |
+| 项目阶段 | 网站健康监测器领域模型 |
 
-一个值仍被不可变借用时，又尝试创建可变借用。
+一个值仍被不可变借用时，又尝试创建可变借用，会看到 `E0502`。
 
-```rust,compile_fail
-fn main() {
-    let mut url = String::from("example.com");
-    let view = &url;
-    url.insert_str(0, "https://");
-    println!("{view}");
-}
-```
+优先缩短借用范围或调整读写顺序；只有确实需要独立快照时才 clone。
 
-## 优先修复顺序
-
-1. 把只读操作放在修改之前，让不可变借用更早结束。
-2. 缩小引用所在的作用域。
-3. 重新设计接口，使读取和修改不需要重叠。
-4. 只有确实需要独立快照时才 clone。
-
-```rust
-fn main() {
-    let mut url = String::from("example.com");
-    println!("before: {url}");
-    url.insert_str(0, "https://");
-    println!("after: {url}");
-}
-```
-
-返回[所有权样章](../guided/ownership.md#实验三mut-t-是临时独占写权限)。
-
+失败代码、状态图、可运行例和修复取舍统一维护在[所有权样章的可变借用实验](../guided/ownership.md#实验三mut-t-是临时独占写权限)。
