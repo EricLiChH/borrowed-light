@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">不可变借用的权限时间线</title>
+  <desc id="desc">main 始终拥有 target；label 执行期间获得临时只读借用，借用结束后 main 继续读取 target。</desc>
+  <rect width="960" height="300" fill="#fff"/>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <style>
+    .line { stroke: currentColor; stroke-width: 3; }
+    .borrow { fill: none; stroke: currentColor; stroke-width: 2; stroke-dasharray: 7 5; rx: 10; }
+    .point { fill: currentColor; }
+    .label { font: 18px system-ui, sans-serif; fill: currentColor; }
+    .small { font: 15px system-ui, sans-serif; fill: currentColor; }
+  </style>
+  <text x="45" y="45" class="label">main 拥有 target</text>
+  <line x1="70" y1="100" x2="900" y2="100" class="line"/>
+  <circle cx="120" cy="100" r="7" class="point"/>
+  <circle cx="470" cy="100" r="7" class="point"/>
+  <circle cx="820" cy="100" r="7" class="point"/>
+  <text x="85" y="135" class="small">L12 创建</text>
+  <text x="400" y="135" class="small">L16 label(&amp;target)</text>
+  <text x="755" y="135" class="small">L17 再次读取</text>
+
+  <rect x="360" y="165" width="260" height="75" class="borrow"/>
+  <text x="390" y="198" class="label">label 临时借用 &amp;target</text>
+  <text x="405" y="225" class="small">权限：只读；所有权不变</text>
+
+  <text x="45" y="280" class="small">借用在 label 的最后一次使用后结束；main 从未失去所有权。</text>
+</svg>

@@ -1,0 +1,21 @@
+[book]
+title = "重返 Rust：交互式 Cookbook"
+description = "为 Rust 回归学习者准备的交互式、项目驱动快速路径"
+language = "zh-CN"
+src = "src"
+
+[rust]
+edition = "2024"
+
+[build]
+create-missing = false
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+smart-punctuation = true
+
+[output.html.playground]
+editable = true
+line-numbers = true
+runnable = true

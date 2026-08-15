@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" role="img" aria-labelledby="title desc">
+  <title id="title">可变借用的独占权限时间线</title>
+  <desc id="desc">main 拥有 url；normalize 执行期间独占借用并修改 url，此时 main 暂停访问；函数返回后 main 恢复访问。</desc>
+  <rect width="960" height="320" fill="#fff"/>
+  <style>
+    .line { stroke: currentColor; stroke-width: 3; }
+    .exclusive { fill: none; stroke: currentColor; stroke-width: 3; rx: 10; }
+    .paused { fill: none; stroke: currentColor; stroke-width: 2; stroke-dasharray: 7 5; rx: 10; }
+    .point { fill: currentColor; }
+    .label { font: 18px system-ui, sans-serif; fill: currentColor; }
+    .small { font: 15px system-ui, sans-serif; fill: currentColor; }
+  </style>
+  <text x="45" y="40" class="label">main 拥有 url</text>
+  <line x1="70" y1="90" x2="900" y2="90" class="line"/>
+  <circle cx="120" cy="90" r="7" class="point"/>
+  <circle cx="450" cy="90" r="7" class="point"/>
+  <circle cx="820" cy="90" r="7" class="point"/>
+  <text x="78" y="125" class="small">L8 创建</text>
+  <text x="358" y="125" class="small">L9 normalize(&amp;mut url)</text>
+  <text x="758" y="125" class="small">L10 再次读取</text>
+
+  <rect x="340" y="155" width="305" height="78" class="exclusive"/>
+  <text x="375" y="188" class="label">normalize 独占借用</text>
+  <text x="388" y="216" class="small">权限：读取 + 修改</text>
+
+  <rect x="350" y="250" width="285" height="48" class="paused"/>
+  <text x="385" y="280" class="small">此期间 main 不能访问 url</text>
+
+  <text x="45" y="312" class="small">函数返回后独占借用结束，所有权从未离开 main。</text>
+</svg>

@@ -1,0 +1,17 @@
+# Don't edit the `bin` list manually! It is updated by `rustlings dev update`
+bin = [
+  { name = "01_move", path = "exercises/ownership/01_move.rs" },
+  { name = "01_move_sol", path = "solutions/ownership/01_move.rs" },
+  { name = "02_borrow", path = "exercises/ownership/02_borrow.rs" },
+  { name = "02_borrow_sol", path = "solutions/ownership/02_borrow.rs" },
+  { name = "03_mut_borrow", path = "exercises/ownership/03_mut_borrow.rs" },
+  { name = "03_mut_borrow_sol", path = "solutions/ownership/03_mut_borrow.rs" },
+]
+
+[package]
+name = "exercises"
+edition = "2024"
+# Don't publish the exercises on crates.io!
+publish = false
+
+[dependencies]

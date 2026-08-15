@@ -1,0 +1,41 @@
+# The format version is an indicator of the compatibility of community exercises with the
+# Rustlings program.
+# The format version is not the same as the version of the Rustlings program.
+# In case Rustlings makes an unavoidable breaking change to the expected format of community
+# exercises, you would need to raise this version and adapt to the new format.
+# Otherwise, the newest version of the Rustlings program won't be able to run these exercises.
+format_version = 1
+
+welcome_message = """
+欢迎回到 Rust！这组三题对应所有权样章。
+先读编译器错误，再按 h 查看方向提示；不要为了让错误消失而盲目 clone。
+"""
+
+final_message = """
+三个所有权练习已完成。现在回到项目检查点，运行：
+  cargo test -p monitor-domain
+"""
+
+[[exercises]]
+name = "01_move"
+dir = "ownership"
+strict_clippy = true
+hint = """
+找到值真正被移动的那一行。Vec 接收元素的所有权；调试输出应发生在移动之前，或改为读取 Vec 中的元素。不要 clone。
+"""
+
+[[exercises]]
+name = "02_borrow"
+dir = "ownership"
+strict_clippy = true
+hint = """
+label 只读取 MonitorTarget。让参数和调用处都表达借用，而不是把整个目标移进函数。
+"""
+
+[[exercises]]
+name = "03_mut_borrow"
+dir = "ownership"
+strict_clippy = true
+hint = """
+修改需要独占可变借用。检查变量绑定、函数参数、调用表达式这三处是否都表达了可变性。
+"""
