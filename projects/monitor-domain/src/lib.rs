@@ -28,8 +28,10 @@ impl MonitorTarget {
             return Err(TargetError::UnsupportedScheme);
         }
 
-        let host = authority.split(['/', '?', '#']).next().unwrap_or_default();
-        if host.trim().is_empty() {
+        let Some(host) = host_from_authority(authority) else {
+            return Err(TargetError::InvalidUrl);
+        };
+        if host.trim().is_empty() || host.chars().any(char::is_whitespace) {
             return Err(TargetError::InvalidUrl);
         }
 
@@ -46,6 +48,25 @@ impl MonitorTarget {
     #[must_use]
     pub fn url(&self) -> &str {
         &self.url
+    }
+}
+
+fn host_from_authority(authority_and_rest: &str) -> Option<&str> {
+    let authority = authority_and_rest.split(['/', '?', '#']).next()?;
+    let host_and_port = authority.rsplit('@').next()?;
+
+    if let Some(bracketed) = host_and_port.strip_prefix('[') {
+        let (host, suffix) = bracketed.split_once(']')?;
+        if !suffix.is_empty() && !suffix.starts_with(':') {
+            return None;
+        }
+        Some(host)
+    } else {
+        Some(
+            host_and_port
+                .split_once(':')
+                .map_or(host_and_port, |(host, _port)| host),
+        )
     }
 }
 

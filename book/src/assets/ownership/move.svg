@@ -20,15 +20,16 @@
   <text x="75" y="135" class="small">拥有 MonitorTarget</text>
 
   <line x1="280" y1="115" x2="415" y2="115" class="arrow"/>
-  <text x="280" y="90" class="small">L16 调用；main::target 失效</text>
+  <text x="292" y="72" class="small">L16 调用</text>
+  <text x="292" y="94" class="small">main::target 失效</text>
 
-  <text x="390" y="35" class="label">L5–L9：参数接管所有权</text>
+  <text x="405" y="35" class="label">L6：参数接管所有权</text>
   <rect x="420" y="60" width="220" height="110" class="box"/>
   <text x="455" y="100" class="label">enqueue::target</text>
   <text x="445" y="135" class="small">当前拥有 MonitorTarget</text>
 
   <line x1="660" y1="115" x2="795" y2="115" class="arrow"/>
-  <text x="674" y="90" class="small">queue.push(target)</text>
+  <text x="665" y="90" class="small">L8 queue.push(target)</text>
 
   <rect x="800" y="60" width="130" height="110" class="box"/>
   <text x="835" y="100" class="label">queue</text>

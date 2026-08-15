@@ -35,7 +35,12 @@ fn learner_gets_a_specific_error_for_a_non_http_scheme() {
 
 #[test]
 fn learner_gets_a_specific_error_when_the_url_has_no_host() {
-    for url in ["https://?query", "https://#fragment"] {
+    for url in [
+        "https://?query",
+        "https://#fragment",
+        "https://:443",
+        "https://user@",
+    ] {
         let error = MonitorTarget::new("Missing host", url)
             .expect_err("a URL without a host should be rejected");
 
