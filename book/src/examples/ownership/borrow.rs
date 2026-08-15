@@ -16,4 +16,3 @@ fn main() {
     println!("{}", label(&target));
     println!("still owned by main: {}", target.name);
 }
-

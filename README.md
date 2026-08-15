@@ -32,4 +32,3 @@ cargo test --workspace
 - 原创正文与图示：CC BY 4.0。
 - 原创代码与练习：MIT OR Apache-2.0。
 - 第三方资料：参见 [THIRD_PARTY.md](THIRD_PARTY.md)。
-

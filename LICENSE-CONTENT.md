@@ -5,4 +5,3 @@ Unless a file says otherwise, original prose and diagrams in `book/` are license
 Copyright © 2026 the Rust Cookbook contributors.
 
 You may share and adapt the material for any purpose, including commercially, provided that you give appropriate credit, link to the license, and indicate whether changes were made. The linked legal code controls if this summary differs from it.
-

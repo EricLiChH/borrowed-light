@@ -16,4 +16,3 @@ fn main() {
     let queue = enqueue(target);
     println!("queued: {}", queue[0].url);
 }
-
