@@ -18,6 +18,14 @@ cargo install rustlings --version 6.5.0 --locked
 scripts/check.sh
 ```
 
+Windows PowerShell 使用：
+
+```powershell
+./scripts/check.ps1
+```
+
+完整平台说明见 [`docs/platforms.md`](docs/platforms.md)。
+
 提交前请确认格式、Clippy、Cargo 测试、mdBook 测试/构建以及 Rustlings 练习与参考解全部通过。
 
 ## 内容约定

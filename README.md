@@ -1,6 +1,8 @@
 # 重返 Rust：交互式 Cookbook
 
-面向曾经使用过 Rust、但已经很久没写的回归学习者。当前仓库包含首个 60–90 分钟样章垂直切片：诊断、所有权三视图、浏览器示例、Rustlings 练习和网站健康监测器领域模型。
+面向曾经使用过 Rust、但已经很久没写的回归学习者。这是一条 30–40 小时的分阶段路径：先恢复核心心智模型，再完成 CLI，最后把同一个网站健康监测器升级为 Tokio + reqwest 异步客户端和 Axum + SQLite Web 服务。
+
+学习不是纯阅读：浏览器承担短讲解、图示和可运行代码，本地承担 Rustlings、编译器反馈、离线网络测试与项目检查点。完整路线见[标准路径](book/src/guided/standard-path.md)。
 
 ## 本地运行
 
@@ -19,13 +21,23 @@ cd exercises
 rustlings
 ```
 
-验证项目检查点：
+验证全部项目检查点：
 
 ```sh
 cargo test --workspace
 ```
 
-维护者可用 `scripts/check.sh` 运行完整本地检查。源码仓库公开托管于 [GitHub](https://github.com/EricLiChH/borrowed-light)；在线教材网站和自动部署尚未启用。
+运行贯穿项目：
+
+```sh
+cargo run -p monitor-cli --bin monitor -- target Rust https://www.rust-lang.org
+cargo run -p monitor-cli --bin monitor -- check Rust https://www.rust-lang.org
+cargo run -p monitor-web
+```
+
+维护者在 macOS/Linux 可用 `scripts/check.sh`，在 Windows PowerShell 可用 `scripts/check.ps1` 运行与 CI 对齐的完整检查。平台差异见[跨平台说明](docs/platforms.md)。
+
+源码公开托管于 [GitHub](https://github.com/EricLiChH/borrowed-light)；在线教材网站和自动部署尚未启用。
 
 ## 参与贡献
 

@@ -1,4 +1,4 @@
-use monitor_domain::{CheckHistory, CheckOutcome, CheckResult, MonitorTarget};
+use monitor_domain::{CheckFailureKind, CheckHistory, CheckOutcome, CheckResult, MonitorTarget};
 
 #[test]
 fn learner_can_move_a_successful_result_into_history_and_borrow_it_back() {
@@ -28,6 +28,7 @@ fn learner_can_record_a_failed_check_without_consuming_the_target() {
     assert_eq!(
         result.outcome(),
         &CheckOutcome::Unreachable {
+            kind: CheckFailureKind::Request,
             reason: "request timed out".to_owned(),
         }
     );

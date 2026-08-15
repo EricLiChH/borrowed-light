@@ -6,6 +6,12 @@ bin = [
   { name = "02_borrow_sol", path = "solutions/ownership/02_borrow.rs" },
   { name = "03_mut_borrow", path = "exercises/ownership/03_mut_borrow.rs" },
   { name = "03_mut_borrow_sol", path = "solutions/ownership/03_mut_borrow.rs" },
+  { name = "04_result", path = "exercises/errors/04_result.rs" },
+  { name = "04_result_sol", path = "solutions/errors/04_result.rs" },
+  { name = "05_repository", path = "exercises/traits/05_repository.rs" },
+  { name = "05_repository_sol", path = "solutions/traits/05_repository.rs" },
+  { name = "06_summary", path = "exercises/iterators/06_summary.rs" },
+  { name = "06_summary_sol", path = "solutions/iterators/06_summary.rs" },
 ]
 
 [package]

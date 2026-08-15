@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">MonitorRepository 存储接缝</title>
+  <desc id="desc">课程测试与 Axum 路由只依赖 MonitorRepository 接口；接口下方有内存与 SQLite 两个适配器，分别隐藏锁和 SQL 细节。</desc>
+  <rect width="960" height="360" fill="#fff"/>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#222"/></marker></defs>
+  <style>.box{fill:none;stroke:#222;stroke-width:2;rx:10}.dash{fill:none;stroke:#222;stroke-width:2;stroke-dasharray:8 6;rx:10}.line{stroke:#222;stroke-width:2;marker-end:url(#arrow)}.label{font:20px system-ui,sans-serif;fill:#222}.small{font:16px system-ui,sans-serif;fill:#222}</style>
+  <rect x="110" y="35" width="250" height="80" class="box"/><text x="135" y="83" class="label">课程测试 / 后续客户端</text>
+  <rect x="600" y="35" width="250" height="80" class="box"/><text x="665" y="83" class="label">Axum Router</text>
+  <line x1="235" y1="120" x2="410" y2="170" class="line"/><line x1="725" y1="120" x2="550" y2="170" class="line"/>
+  <rect x="330" y="150" width="300" height="80" class="dash"/><text x="382" y="185" class="label">MonitorRepository</text><text x="375" y="212" class="small">add / get / list / save / latest</text>
+  <line x1="430" y1="235" x2="270" y2="275" class="line"/><line x1="530" y1="235" x2="690" y2="275" class="line"/>
+  <rect x="105" y="265" width="280" height="70" class="box"/><text x="145" y="300" class="label">InMemoryRepository</text><text x="150" y="325" class="small">隐藏 RwLock 与集合</text>
+  <rect x="575" y="265" width="280" height="70" class="box"/><text x="630" y="300" class="label">SqliteRepository</text><text x="610" y="325" class="small">隐藏 migration、SQL 与行映射</text>
+</svg>

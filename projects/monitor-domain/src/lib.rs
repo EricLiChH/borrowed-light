@@ -1,5 +1,7 @@
 //! Domain types for the website health monitor project.
 
+use std::fmt;
+
 /// A website selected for health checks.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MonitorTarget {
@@ -81,13 +83,42 @@ pub enum TargetError {
     UnsupportedScheme,
 }
 
+impl fmt::Display for TargetError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::EmptyName => "target name must not be blank",
+            Self::InvalidUrl => "target URL must include a valid scheme and host",
+            Self::UnsupportedScheme => "target URL must use HTTP or HTTPS",
+        };
+        formatter.write_str(message)
+    }
+}
+
+impl std::error::Error for TargetError {}
+
 /// The observable outcome of one website check.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CheckOutcome {
     /// The website returned an HTTP response.
     Reachable { status: u16 },
     /// The website could not be checked.
-    Unreachable { reason: String },
+    Unreachable {
+        /// Stable category callers can match without parsing prose.
+        kind: CheckFailureKind,
+        /// Human-readable diagnostic detail.
+        reason: String,
+    },
+}
+
+/// Stable categories for failed website checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CheckFailureKind {
+    /// The request exceeded the configured deadline.
+    Timeout,
+    /// A connection could not be established.
+    Connect,
+    /// Another request-layer failure occurred.
+    Request,
 }
 
 /// An owned snapshot of one check.
@@ -112,10 +143,21 @@ impl CheckResult {
     /// Records why a website could not be checked while only borrowing the target.
     #[must_use]
     pub fn unreachable(target: &MonitorTarget, reason: impl Into<String>) -> Self {
+        Self::unreachable_with(target, CheckFailureKind::Request, reason)
+    }
+
+    /// Records a classified website check failure while only borrowing the target.
+    #[must_use]
+    pub fn unreachable_with(
+        target: &MonitorTarget,
+        kind: CheckFailureKind,
+        reason: impl Into<String>,
+    ) -> Self {
         Self {
             target_name: target.name().to_owned(),
             target_url: target.url().to_owned(),
             outcome: CheckOutcome::Unreachable {
+                kind,
                 reason: reason.into(),
             },
         }

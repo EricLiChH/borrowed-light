@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+      - name: Install course tools
+        run: |
+          cargo install mdbook --version 0.5.4 --locked
+          cargo install rustlings --version 6.5.0 --locked
+      - name: Verify on macOS or Linux
+        if: runner.os != 'Windows'
+        run: sh scripts/check.sh
+      - name: Verify on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/check.ps1

@@ -1,0 +1,24 @@
+[package]
+name = "monitor-web"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+axum.workspace = true
+monitor-core = { path = "../monitor-core" }
+monitor-domain = { path = "../monitor-domain" }
+monitor-store = { path = "../monitor-store" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

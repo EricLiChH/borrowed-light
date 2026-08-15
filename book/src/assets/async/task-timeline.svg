@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="330" viewBox="0 0 960 330" role="img" aria-labelledby="title desc">
+  <title id="title">异步任务与运行时时间线</title>
+  <desc id="desc">任务 A 发起网络 I/O 后等待，运行时转去推进任务 B；网络就绪后任务 A 被唤醒并继续。</desc>
+  <rect width="960" height="330" fill="#fff"/>
+  <style>.axis{stroke:#222;stroke-width:2}.wait{fill:none;stroke:#222;stroke-width:2;stroke-dasharray:8 6}.run{fill:#fff;stroke:#222;stroke-width:2;rx:8}.label{font:20px system-ui,sans-serif;fill:#222}.small{font:16px system-ui,sans-serif;fill:#222}</style>
+  <text x="45" y="45" class="label">时间 →</text><line x1="140" y1="40" x2="915" y2="40" class="axis"/>
+  <text x="45" y="115" class="label">任务 A</text><line x1="140" y1="110" x2="915" y2="110" class="axis"/>
+  <rect x="165" y="80" width="150" height="58" class="run"/><text x="190" y="115" class="small">发起 HTTP 请求</text>
+  <rect x="315" y="80" width="340" height="58" class="wait"/><text x="415" y="115" class="small">等待 I/O（让出执行权）</text>
+  <rect x="655" y="80" width="190" height="58" class="run"/><text x="690" y="115" class="small">被唤醒并解析响应</text>
+  <text x="45" y="220" class="label">任务 B</text><line x1="140" y1="215" x2="915" y2="215" class="axis"/>
+  <rect x="345" y="185" width="250" height="58" class="run"/><text x="395" y="220" class="small">运行时推进其他工作</text>
+  <text x="165" y="292" class="small">`.await` 是可暂停点；等待不占住线程，future 也不会自动创建线程。</text>
+</svg>
