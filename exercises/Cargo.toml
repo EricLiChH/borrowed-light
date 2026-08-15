@@ -30,10 +30,12 @@ bin = [
   { name = "14_send_sync_sol", path = "solutions/concurrency/14_send_sync.rs" },
   { name = "15_retry_policy", path = "exercises/async/15_retry_policy.rs" },
   { name = "15_retry_policy_sol", path = "solutions/async/15_retry_policy.rs" },
-  { name = "16_web_state", path = "exercises/web/16_web_state.rs" },
-  { name = "16_web_state_sol", path = "solutions/web/16_web_state.rs" },
-  { name = "17_storage_mapping", path = "exercises/storage/17_storage_mapping.rs" },
-  { name = "17_storage_mapping_sol", path = "solutions/storage/17_storage_mapping.rs" },
+  { name = "16_backpressure_cancel", path = "exercises/async/16_backpressure_cancel.rs" },
+  { name = "16_backpressure_cancel_sol", path = "solutions/async/16_backpressure_cancel.rs" },
+  { name = "17_web_state", path = "exercises/web/17_web_state.rs" },
+  { name = "17_web_state_sol", path = "solutions/web/17_web_state.rs" },
+  { name = "18_storage_mapping", path = "exercises/storage/18_storage_mapping.rs" },
+  { name = "18_storage_mapping_sol", path = "solutions/storage/18_storage_mapping.rs" },
 ]
 
 [package]
@@ -43,3 +45,4 @@ edition = "2024"
 publish = false
 
 [dependencies]
+tokio = { version = "=1.53.1", features = ["macros", "rt", "sync"] }

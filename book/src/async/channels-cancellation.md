@@ -2,39 +2,43 @@
 
 | 任务 | 概念 | 预计时间 | 项目产物 |
 |---|---|---:|---|
-| 让异步任务能暂停、排队和停止 | Tokio task、mpsc、backpressure、cancellation safety | 120 分钟 | 有边界的任务流水线 |
+| 让异步任务能暂停、排队和停止 | Tokio task、mpsc、Pending、backpressure、cancellation safety | 120 分钟 | 有边界的任务流水线 |
 
-Tokio 的有界 channel 把容量写进系统：队列满时 `send().await` 会暂停生产者，这就是背压（backpressure），不是错误。
+Tokio 的有界 channel 把容量写进系统：队列满时，第二个 `send().await` 会进入 `Pending` 并让出执行权，这就是背压（backpressure）。shutdown 分支先完成时，仍未完成的 send future 被丢弃，第二条消息不会偷偷进入队列。
 
-```rust,ignore
-use tokio::sync::mpsc;
+![容量为一的 channel 已装入消息 1，消息 2 的 send 进入 Pending；shutdown 使 select 结束并丢弃待发送 future](../assets/async/channel-backpressure-cancel.svg)
 
-let (sender, mut receiver) = mpsc::channel::<String>(8);
-tokio::spawn(async move {
-    sender.send("https://example.com".into()).await.unwrap();
-});
-while let Some(url) = receiver.recv().await {
-    println!("checking {url}");
-}
-```
-
-## 取消发生在 `.await` 边界
-
-丢弃一个 future 会取消尚未完成的工作。设计时逐个检查 `.await`：在它之前是否已经修改了半份状态？是否跨暂停点持有同步锁？是否必须用 guard/事务保证恢复？
+本地练习和图使用同一个案例：容量为 1，先放入消息 1，再轮询消息 2 的发送 future。
 
 ```rust,ignore
-tokio::select! {
-    result = checker.check(&target) => save(result).await?,
-    _ = shutdown.recv() => return Ok(()),
-}
+let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+sender.send(1).await?;
+let mut blocked_send = Box::pin(sender.send(2));
+
+let shutdown = async {};
+let cancelled = tokio::select! {
+    biased;
+    () = shutdown => true,
+    result = &mut blocked_send => {
+        result?;
+        false
+    }
+};
+drop(blocked_send);
+assert!(cancelled);
+assert_eq!(receiver.recv().await, Some(1));
+assert!(receiver.try_recv().is_err());
 ```
 
-`select!` 结束后，未选中的分支会被丢弃。网络请求通常可取消；“扣款后再写记录”这类两步副作用则必须重新设计。
+练习额外用 `poll_fn` 手动轮询一次第二个 send：必须看到 `Poll::Pending`，才说明验证的是背压而不是碰巧先选 shutdown。
 
-## 项目里的三种边界
+```sh
+cd exercises
+rustlings run 16_backpressure_cancel
+```
 
-1. `buffer_unordered(N)` 限制同时进行的目标数。
-2. 每个目标的总超时限制请求、重试和退避的总预算。
-3. Web 服务的 Ctrl-C 信号停止接收新连接，并等待在途任务结束。
+## 取消安全检查表
 
-完成 `13_future`：亲手轮询一个立即就绪的 future；再修改其返回逻辑，让失败从运行期 panic 变成测试反馈。
+逐个检查 `.await`：在它之前是否已经写了半份状态？未选中的 branch 被 drop 后是否能安全重试？同步锁是否跨暂停点持有？网络读取通常可以取消；“先扣款再写记录”的两步副作用则需要事务或重新建模。
+
+项目中的并发窗口限制在途目标数，总超时取消超预算的请求/退避，Web 的 Ctrl-C 信号停止接收新连接。三处机制不同，但都依赖“future 可以在暂停点被丢弃”的同一语义。

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">有界 channel 的背压与取消</title>
+  <desc id="desc">容量为一的 channel 已装有消息一，消息二的 send future 因队列已满进入 Pending；shutdown 分支完成后，select 丢弃 send future，接收端最终只得到消息一。</desc>
+  <rect width="960" height="300" fill="#fff"/>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#222"/></marker></defs>
+  <style>.box{fill:none;stroke:#222;stroke-width:2;rx:10}.dash{fill:none;stroke:#222;stroke-width:2;stroke-dasharray:8 6;rx:10}.line{stroke:#222;stroke-width:2;marker-end:url(#arrow)}.stop{stroke:#222;stroke-width:5}.label{font:18px system-ui,sans-serif;fill:#222}.small{font:15px system-ui,sans-serif;fill:#222}</style>
+  <text x="45" y="45" class="label">步骤 1：容量 1 已满</text>
+  <rect x="45" y="85" width="170" height="75" class="box"/><text x="83" y="120" class="label">sender</text><text x="68" y="145" class="small">准备发送消息 2</text>
+  <line x1="220" y1="123" x2="300" y2="123" class="line"/>
+  <rect x="305" y="75" width="205" height="95" class="box"/><text x="345" y="108" class="label">channel（容量 1）</text><rect x="365" y="123" width="85" height="30" class="dash"/><text x="381" y="144" class="small">消息 1</text>
+  <line x1="515" y1="123" x2="590" y2="123" class="line"/>
+  <rect x="595" y="85" width="145" height="75" class="box"/><text x="627" y="130" class="label">receiver</text>
+  <text x="45" y="215" class="label">步骤 2：send(2) = Pending</text><line x1="300" y1="205" x2="300" y2="255" class="stop"/>
+  <rect x="350" y="195" width="185" height="70" class="dash"/><text x="392" y="225" class="label">shutdown Ready</text><text x="380" y="250" class="small">select 选择此分支</text>
+  <line x1="540" y1="230" x2="650" y2="230" class="line"/>
+  <rect x="655" y="195" width="255" height="70" class="box"/><text x="690" y="225" class="label">drop send future</text><text x="685" y="250" class="small">接收端没有消息 2</text>
+</svg>

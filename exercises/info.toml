@@ -7,12 +7,12 @@
 format_version = 1
 
 welcome_message = """
-欢迎回到 Rust！这 17 题覆盖所有权、错误、集合、生命周期、trait、并发、异步与 Web 状态。
+欢迎回到 Rust！这 18 题覆盖所有权、错误、集合、生命周期、trait、并发、异步与 Web 状态。
 先读编译器错误，再按 h 查看方向提示；不要为了让错误消失而盲目 clone。
 """
 
 final_message = """
-17 个练习已完成。现在验证 CLI、异步网络与 Web 检查点：
+18 个练习已完成。现在验证 CLI、异步网络与 Web 检查点：
   cargo test --manifest-path ../Cargo.toml --workspace
 """
 
@@ -45,7 +45,7 @@ name = "04_result"
 dir = "errors"
 strict_clippy = true
 hint = """
-把字符串解析错误转换成课程自己的 String 错误，然后用 ? 提前返回；范围错误仍需显式判断。
+区分“解析失败”和“数字超出 HTTP 状态范围”，让调用者收到错误而不是 panic。
 """
 
 [[exercises]]
@@ -53,7 +53,7 @@ name = "05_repository"
 dir = "traits"
 strict_clippy = true
 hint = """
-Vec<Target> 已经拥有数据。为它实现 TargetSource，并让 latest 返回 Option<&Target>，不要 clone。
+数据源已经拥有 Target；让调用者读取最近目标时不要制造第二份所有权。
 """
 
 [[exercises]]
@@ -61,7 +61,7 @@ name = "06_summary"
 dir = "iterators"
 strict_clippy = true
 hint = """
-先 iter() 借用切片，再 filter 保留 200..300 的状态，最后 count。注意 filter 闭包接收的是双重引用。
+从借用的状态切片计算 2xx 数量，不修改输入，也不创建中间集合。
 """
 
 [[exercises]]
@@ -69,7 +69,7 @@ name = "07_lifetimes"
 dir = "lifetimes"
 strict_clippy = true
 hint = """
-方向：返回引用必须来自两个输入之一。API：给两个输入与返回值使用同一个命名生命周期。形状：fn longer<'a>(left: &'a str, right: &'a str) -> &'a str。
+返回引用必须来自两个输入之一；标注应描述输入与输出的关系。
 """
 
 [[exercises]]
@@ -77,7 +77,7 @@ name = "08_borrowed_struct"
 dir = "lifetimes"
 strict_clippy = true
 hint = """
-方向：Selection 的引用来自 names。API：slice::first 与 Option::map。形状：names.first().map(|name| Selection { name })。
+让 Selection 借用 names 中已有的 String，不要 clone 或创建局部所有者。
 """
 
 [[exercises]]
@@ -85,7 +85,7 @@ name = "09_borrowed_slice"
 dir = "lifetimes"
 strict_clippy = true
 hint = """
-方向：返回值必须是 url 内部的切片。API：trim_start_matches、split、next。形状：直接在输入 &str 上链接调用，不创建 String。
+返回值必须是 url 内部的一段切片；局部 String 无法被安全返回。
 """
 
 [[exercises]]
@@ -93,7 +93,7 @@ name = "10_collections"
 dir = "collections"
 strict_clippy = true
 hint = """
-方向：遍历切片并累计两个桶。API：HashMap::entry(...).or_insert(0)。形状：判断 200..300 后对 entry 解引用并 += 1。
+遍历状态切片，把每个值累计到 healthy 或 other 两个桶。
 """
 
 [[exercises]]
@@ -101,7 +101,7 @@ name = "11_modules"
 dir = "modules"
 strict_clippy = true
 hint = """
-方向：字段保持私有，只公开构造和读取能力。API：pub fn new 与 pub fn name。形状：new 返回 Option<Self>，name 返回 &str。
+字段保持私有，只公开能维护非空名称不变量的构造与读取能力。
 """
 
 [[exercises]]
@@ -109,7 +109,7 @@ name = "12_threads"
 dir = "concurrency"
 strict_clippy = true
 hint = """
-方向：两个 worker 通过消息交出 u16。API：mpsc::channel、Sender::clone、thread::spawn。形状：drop 所有 sender 后 receiver.iter().collect() 并排序。
+让两个 worker 通过消息转移状态码；主线程只从接收端汇总。
 """
 
 [[exercises]]
@@ -117,7 +117,7 @@ name = "13_future"
 dir = "async"
 strict_clippy = true
 hint = """
-方向：async fn 调用先产生 future，poll 才执行函数体。API：直接返回参数即可形成 Ready。形状：函数体最后写 status，不加分号。
+async fn 调用只产生 future；让第一次 poll 得到预期状态码。
 """
 
 [[exercises]]
@@ -125,7 +125,7 @@ name = "14_send_sync"
 dir = "concurrency"
 strict_clippy = true
 hint = """
-方向：需要共享所有权和同步内部修改。API：Arc::new 与 Mutex::new。形状：Arc<Mutex<Vec<u16>>>，不要用 Rc<RefCell<_>>。
+跨线程共享列表同时需要共享所有权和同步内部修改，二者缺一不可。
 """
 
 [[exercises]]
@@ -133,21 +133,29 @@ name = "15_retry_policy"
 dir = "async"
 strict_clippy = true
 hint = """
-方向：次数与错误类别都必须允许。API：matches!。形状：attempt < max_attempts && matches!(failure, Connect | Timeout)。
+只有仍有次数且错误属于瞬态类别时才重试。
 """
 
 [[exercises]]
-name = "16_web_state"
+name = "16_backpressure_cancel"
+dir = "async"
+strict_clippy = true
+hint = """
+队列已满时第二次 send 必须保持 Pending；让 shutdown 分支结束 select，并确认消息 2 未发送。
+"""
+
+[[exercises]]
+name = "17_web_state"
 dir = "web"
 strict_clippy = true
 hint = """
-方向：AppState 的 clone 必须看到同一列表。API：Arc::new(RwLock::new(...))。形状：构造 AppState { targets: ... }。
+AppState 的 clone 必须看到同一目标列表，而不是各自拥有一份 Vec。
 """
 
 [[exercises]]
-name = "17_storage_mapping"
+name = "18_storage_mapping"
 dir = "storage"
 strict_clippy = true
 hint = """
-方向：用 match 保持 enum 分支互斥。API：String::as_str 可由自动解引用完成。形状：成功填 status；失败填 kind/reason。
+用 enum 的互斥分支决定哪些存储列有值，不要先制造互相矛盾的中间状态。
 """
