@@ -25,7 +25,7 @@ rustlings
 cargo test --workspace
 ```
 
-维护者可用 `scripts/check.sh` 运行完整本地检查。源码仓库公开托管于 [GitHub](https://github.com/EricLiChH/rust-cookbook-rust)；在线教材网站和自动部署尚未启用。
+维护者可用 `scripts/check.sh` 运行完整本地检查。源码仓库公开托管于 [GitHub](https://github.com/EricLiChH/borrowed-light)；在线教材网站和自动部署尚未启用。
 
 ## 参与贡献
 

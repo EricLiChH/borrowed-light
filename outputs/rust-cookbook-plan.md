@@ -226,7 +226,7 @@ flowchart LR
 ## 8. 建议的仓库形态（实现时再创建）
 
 ```text
-rust-cookbook-rust/
+borrowed-light/
 ├── CONTEXT.md                 # 已确认的教学领域术语
 ├── docs/adr/                  # 少量、真正难以反转的决策
 ├── book/                      # mdBook 中文正文

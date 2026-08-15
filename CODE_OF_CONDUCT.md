@@ -22,6 +22,6 @@
 
 需要私下报告问题时，请使用仓库的 GitHub Security Advisory：
 
-<https://github.com/EricLiChH/rust-cookbook-rust/security/advisories/new>
+<https://github.com/EricLiChH/borrowed-light/security/advisories/new>
 
 维护者会尽快、公平地处理报告，并保护报告者的隐私。
