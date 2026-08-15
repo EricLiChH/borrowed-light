@@ -116,7 +116,11 @@ impl HealthChecker {
                     } else {
                         CheckFailureKind::Request
                     };
+                    let retryable = is_retryable_transport_error(&error);
                     last_failure = (kind, error.to_string());
+                    if !retryable {
+                        break;
+                    }
                 }
             }
 
@@ -144,4 +148,11 @@ impl HealthChecker {
             .map(|(_index, result)| result)
             .collect()
     }
+}
+
+fn is_retryable_transport_error(error: &reqwest::Error) -> bool {
+    error.is_timeout()
+        || error.is_connect()
+        || error.is_body()
+        || (error.is_request() && !error.is_builder() && !error.is_redirect() && !error.is_decode())
 }

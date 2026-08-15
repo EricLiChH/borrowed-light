@@ -7,15 +7,13 @@
 format_version = 1
 
 welcome_message = """
-欢迎回到 Rust！这六题覆盖所有权、错误、trait 与迭代器。
+欢迎回到 Rust！这 17 题覆盖所有权、错误、集合、生命周期、trait、并发、异步与 Web 状态。
 先读编译器错误，再按 h 查看方向提示；不要为了让错误消失而盲目 clone。
 """
 
 final_message = """
-六个核心练习已完成。现在验证 CLI、异步网络与 Web 检查点：
-  cargo test --manifest-path ../Cargo.toml -p monitor-domain
-  cargo test --manifest-path ../Cargo.toml -p monitor-core
-  cargo test --manifest-path ../Cargo.toml -p monitor-web
+17 个练习已完成。现在验证 CLI、异步网络与 Web 检查点：
+  cargo test --manifest-path ../Cargo.toml --workspace
 """
 
 [[exercises]]
@@ -64,4 +62,92 @@ dir = "iterators"
 strict_clippy = true
 hint = """
 先 iter() 借用切片，再 filter 保留 200..300 的状态，最后 count。注意 filter 闭包接收的是双重引用。
+"""
+
+[[exercises]]
+name = "07_lifetimes"
+dir = "lifetimes"
+strict_clippy = true
+hint = """
+方向：返回引用必须来自两个输入之一。API：给两个输入与返回值使用同一个命名生命周期。形状：fn longer<'a>(left: &'a str, right: &'a str) -> &'a str。
+"""
+
+[[exercises]]
+name = "08_borrowed_struct"
+dir = "lifetimes"
+strict_clippy = true
+hint = """
+方向：Selection 的引用来自 names。API：slice::first 与 Option::map。形状：names.first().map(|name| Selection { name })。
+"""
+
+[[exercises]]
+name = "09_borrowed_slice"
+dir = "lifetimes"
+strict_clippy = true
+hint = """
+方向：返回值必须是 url 内部的切片。API：trim_start_matches、split、next。形状：直接在输入 &str 上链接调用，不创建 String。
+"""
+
+[[exercises]]
+name = "10_collections"
+dir = "collections"
+strict_clippy = true
+hint = """
+方向：遍历切片并累计两个桶。API：HashMap::entry(...).or_insert(0)。形状：判断 200..300 后对 entry 解引用并 += 1。
+"""
+
+[[exercises]]
+name = "11_modules"
+dir = "modules"
+strict_clippy = true
+hint = """
+方向：字段保持私有，只公开构造和读取能力。API：pub fn new 与 pub fn name。形状：new 返回 Option<Self>，name 返回 &str。
+"""
+
+[[exercises]]
+name = "12_threads"
+dir = "concurrency"
+strict_clippy = true
+hint = """
+方向：两个 worker 通过消息交出 u16。API：mpsc::channel、Sender::clone、thread::spawn。形状：drop 所有 sender 后 receiver.iter().collect() 并排序。
+"""
+
+[[exercises]]
+name = "13_future"
+dir = "async"
+strict_clippy = true
+hint = """
+方向：async fn 调用先产生 future，poll 才执行函数体。API：直接返回参数即可形成 Ready。形状：函数体最后写 status，不加分号。
+"""
+
+[[exercises]]
+name = "14_send_sync"
+dir = "concurrency"
+strict_clippy = true
+hint = """
+方向：需要共享所有权和同步内部修改。API：Arc::new 与 Mutex::new。形状：Arc<Mutex<Vec<u16>>>，不要用 Rc<RefCell<_>>。
+"""
+
+[[exercises]]
+name = "15_retry_policy"
+dir = "async"
+strict_clippy = true
+hint = """
+方向：次数与错误类别都必须允许。API：matches!。形状：attempt < max_attempts && matches!(failure, Connect | Timeout)。
+"""
+
+[[exercises]]
+name = "16_web_state"
+dir = "web"
+strict_clippy = true
+hint = """
+方向：AppState 的 clone 必须看到同一列表。API：Arc::new(RwLock::new(...))。形状：构造 AppState { targets: ... }。
+"""
+
+[[exercises]]
+name = "17_storage_mapping"
+dir = "storage"
+strict_clippy = true
+hint = """
+方向：用 match 保持 enum 分支互斥。API：String::as_str 可由自动解引用完成。形状：成功填 status；失败填 kind/reason。
 """

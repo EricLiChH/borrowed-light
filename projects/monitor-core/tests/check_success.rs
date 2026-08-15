@@ -11,7 +11,11 @@ async fn learner_can_check_a_local_website_without_using_the_public_internet() {
     let target = MonitorTarget::new("local", url).expect("local URL should be valid");
     let policy = CheckPolicy::new(Duration::from_secs(1), 1, Duration::ZERO, 1)
         .expect("policy should be valid");
-    let checker = HealthChecker::new(reqwest::Client::new(), policy);
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .expect("test client should build");
+    let checker = HealthChecker::new(client, policy);
 
     let result = checker.check(&target).await;
 

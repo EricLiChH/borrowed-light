@@ -32,7 +32,7 @@ async fn learner_can_record_and_read_the_latest_result_in_memory() {
         .expect("target should be stored");
 
     repository
-        .save_result(stored.id(), CheckResult::reachable(&target, 204))
+        .save_result(stored.id(), &CheckResult::reachable(&target, 204))
         .await
         .expect("result should be stored");
     let latest = repository

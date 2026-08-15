@@ -47,7 +47,7 @@ pub trait MonitorRepository: Send + Sync {
     async fn get_target(&self, target_id: i64) -> Result<Option<StoredTarget>, StoreError>;
 
     /// Stores a check result for an existing target.
-    async fn save_result(&self, target_id: i64, result: CheckResult) -> Result<(), StoreError>;
+    async fn save_result(&self, target_id: i64, result: &CheckResult) -> Result<(), StoreError>;
 
     /// Returns the newest result for a target, if one exists.
     async fn latest_result(&self, target_id: i64) -> Result<Option<CheckResult>, StoreError>;
@@ -97,12 +97,19 @@ impl MonitorRepository for InMemoryRepository {
             .cloned())
     }
 
-    async fn save_result(&self, target_id: i64, result: CheckResult) -> Result<(), StoreError> {
+    async fn save_result(&self, target_id: i64, result: &CheckResult) -> Result<(), StoreError> {
         let mut state = self.state.write().await;
-        if !state.targets.iter().any(|target| target.id == target_id) {
-            return Err(StoreError::new(format!("target {target_id} was not found")));
-        }
-        state.results.entry(target_id).or_default().push(result);
+        let stored = state
+            .targets
+            .iter()
+            .find(|target| target.id == target_id)
+            .ok_or_else(|| StoreError::new(format!("target {target_id} was not found")))?;
+        ensure_result_matches_target(stored, result)?;
+        state
+            .results
+            .entry(target_id)
+            .or_default()
+            .push(result.clone());
         Ok(())
     }
 
@@ -203,7 +210,12 @@ impl MonitorRepository for SqliteRepository {
         .transpose()
     }
 
-    async fn save_result(&self, target_id: i64, result: CheckResult) -> Result<(), StoreError> {
+    async fn save_result(&self, target_id: i64, result: &CheckResult) -> Result<(), StoreError> {
+        let stored = self
+            .get_target(target_id)
+            .await?
+            .ok_or_else(|| StoreError::new(format!("target {target_id} was not found")))?;
+        ensure_result_matches_target(&stored, result)?;
         let (status, kind, reason) = outcome_columns(result.outcome());
         sqlx::query(
             "INSERT INTO check_results (target_id, status, failure_kind, reason)
@@ -235,6 +247,20 @@ impl MonitorRepository for SqliteRepository {
         .map_err(StoreError::from_display)?;
 
         row.as_ref().map(row_to_result).transpose()
+    }
+}
+
+fn ensure_result_matches_target(
+    stored: &StoredTarget,
+    result: &CheckResult,
+) -> Result<(), StoreError> {
+    if stored.target.name() == result.target_name() && stored.target.url() == result.target_url() {
+        Ok(())
+    } else {
+        Err(StoreError::new(format!(
+            "check result does not belong to target {}",
+            stored.id
+        )))
     }
 }
 

@@ -13,15 +13,7 @@
 5. 重试前执行明确的 backoff。
 6. 最终结果按输入顺序返回，并带稳定错误分类。
 
-```mermaid
-flowchart LR
-    A["目标队列"] --> B["并发窗口"]
-    B --> C["总超时边界"]
-    C -->|成功| D["结果"]
-    C -->|传输失败且仍有次数| E["退避"]
-    E --> C
-    C -->|次数耗尽| F["Timeout / Connect / Request"]
-```
+![调度边界：目标先经过并发窗口，每个目标在总超时内执行有限重试与退避](../assets/async/scheduling-boundaries.svg)
 
 对应的三个测试各自只验证一个行为：
 

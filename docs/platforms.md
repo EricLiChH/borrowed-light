@@ -1,6 +1,6 @@
 # macOS、Linux 与 Windows 本地验证
 
-仓库锁定 Rust 1.88.0；先安装 Rustup，再安装课程工具：
+仓库锁定 Rust 1.88.0；完整维护检查还需要 Python 3。先安装 Rustup，再安装课程工具：
 
 ```sh
 cargo install mdbook --version 0.5.4 --locked
@@ -35,7 +35,7 @@ $env:BIND_ADDRESS = "127.0.0.1:3000"
 cargo run -p monitor-web
 ```
 
-`scripts/check.sh` 需要 POSIX shell；Windows 原生流程使用 `scripts/check.ps1`。两个入口都依次执行格式、Clippy、工作区测试、mdBook 测试/构建和 Rustlings 检查。GitHub Actions 在 Ubuntu、macOS 和 Windows 上分别运行对应入口，但不部署 Pages。
+`scripts/check.sh` 需要 POSIX shell；Windows 原生流程使用 `scripts/check.ps1`。两个入口都依次执行格式、Clippy、工作区测试、内部链接、mdBook 测试/构建和 Rustlings 检查。GitHub Actions 在 Ubuntu、macOS 和 Windows 上分别运行对应入口，但不部署 Pages。
 
 ## 常见差异
 

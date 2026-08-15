@@ -39,6 +39,51 @@ async fn learner_can_bound_batch_concurrency() {
     assert!(probe.maximum.load(Ordering::SeqCst) <= 2);
 }
 
+#[tokio::test(start_paused = true)]
+async fn batch_results_keep_input_order_when_responses_finish_out_of_order() {
+    let slow_url = serve_after(Duration::from_secs(10)).await;
+    let fast_url = serve_after(Duration::ZERO).await;
+    let targets = vec![
+        MonitorTarget::new("slow-first", slow_url).expect("local URL should be valid"),
+        MonitorTarget::new("fast-second", fast_url).expect("local URL should be valid"),
+    ];
+    let policy = CheckPolicy::new(Duration::from_secs(20), 1, Duration::ZERO, 2)
+        .expect("policy should be valid");
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .expect("test client should build");
+    let checker = HealthChecker::new(client, policy);
+
+    let results = checker.check_all(&targets).await;
+
+    let names = results
+        .iter()
+        .map(monitor_domain::CheckResult::target_name)
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec!["slow-first", "fast-second"]);
+}
+
+async fn serve_after(delay: Duration) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("test server should bind");
+    let address = listener
+        .local_addr()
+        .expect("listener should have an address");
+    tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.expect("server should accept");
+        let mut request = [0_u8; 1024];
+        let _ = stream.read(&mut request).await;
+        tokio::time::sleep(delay).await;
+        stream
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
+            .await
+            .expect("server should reply");
+    });
+    format!("http://{address}")
+}
+
 struct ConcurrencyProbe {
     url: String,
     accepted: Arc<AtomicUsize>,

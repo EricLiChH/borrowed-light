@@ -9,8 +9,8 @@
 ![异步任务时间线：任务在等待 I/O 时让出执行权，运行时推进其他任务](../assets/async/task-timeline.svg)
 
 ```rust,ignore
-async fn check(url: &str) -> Result<u16, reqwest::Error> {
-    let response = reqwest::get(url).await?;
+async fn check(client: &reqwest::Client, url: &str) -> Result<u16, reqwest::Error> {
+    let response = client.get(url).send().await?;
     Ok(response.status().as_u16())
 }
 ```

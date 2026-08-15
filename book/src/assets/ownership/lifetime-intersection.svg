@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">返回引用的生命周期交集</title>
+  <desc id="desc">left 引用从时间 1 持续到时间 5，right 从时间 2 持续到时间 4，返回引用只能位于两者重叠的时间 2 到 4。</desc>
+  <rect width="960" height="300" fill="#fff"/>
+  <style>.axis{stroke:#222;stroke-width:2}.range{fill:none;stroke:#222;stroke-width:10}.return{fill:none;stroke:#222;stroke-width:4;stroke-dasharray:8 6}.label{font:18px system-ui,sans-serif;fill:#222}.small{font:15px system-ui,sans-serif;fill:#222}</style>
+  <text x="60" y="45" class="label">时间 →</text><line x1="160" y1="40" x2="900" y2="40" class="axis"/>
+  <text x="60" y="105" class="label">left: &amp;'a str</text><line x1="180" y1="100" x2="820" y2="100" class="range"/>
+  <text x="60" y="170" class="label">right: &amp;'a str</text><line x1="300" y1="165" x2="700" y2="165" class="range"/>
+  <text x="60" y="235" class="label">返回引用</text><line x1="300" y1="230" x2="700" y2="230" class="return"/>
+  <line x1="300" y1="75" x2="300" y2="250" class="axis"/><line x1="700" y1="75" x2="700" y2="250" class="axis"/>
+  <text x="320" y="280" class="small">可用范围是输入引用的交集；标注描述关系，不延长数据寿命。</text>
+</svg>

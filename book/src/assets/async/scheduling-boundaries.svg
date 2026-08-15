@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="300" viewBox="0 0 960 300" role="img" aria-labelledby="title desc">
+  <title id="title">检查调度的三层边界</title>
+  <desc id="desc">目标队列先进入并发窗口；每个目标拥有一个覆盖请求、有限重试和退避的总超时；成功或次数耗尽后产生分类结果。</desc>
+  <rect width="960" height="300" fill="#fff"/>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#222"/></marker></defs>
+  <style>.box{fill:none;stroke:#222;stroke-width:2;rx:10}.dash{fill:none;stroke:#222;stroke-width:2;stroke-dasharray:8 6;rx:10}.line{stroke:#222;stroke-width:2;marker-end:url(#arrow);fill:none}.label{font:18px system-ui,sans-serif;fill:#222}.small{font:15px system-ui,sans-serif;fill:#222}</style>
+  <rect x="40" y="105" width="145" height="75" class="box"/><text x="75" y="138" class="label">目标队列</text><text x="58" y="163" class="small">保留输入顺序编号</text>
+  <line x1="190" y1="143" x2="250" y2="143" class="line"/>
+  <rect x="255" y="90" width="165" height="105" class="box"/><text x="292" y="130" class="label">并发窗口</text><text x="278" y="158" class="small">最多 N 个进行中</text><text x="280" y="180" class="small">完成顺序可不同</text>
+  <line x1="425" y1="143" x2="475" y2="143" class="line"/>
+  <rect x="480" y="45" width="300" height="195" class="dash"/><text x="560" y="78" class="label">单目标总超时</text>
+  <rect x="515" y="105" width="95" height="55" class="box"/><text x="535" y="139" class="small">HTTP 请求</text>
+  <line x1="615" y1="133" x2="655" y2="133" class="line"/>
+  <rect x="660" y="105" width="85" height="55" class="box"/><text x="687" y="139" class="small">退避</text>
+  <path d="M703 165 C703 210,560 210,560 165" class="line"/>
+  <text x="535" y="225" class="small">只重试瞬态传输失败；redirect/builder 错误直接结束</text>
+  <line x1="785" y1="143" x2="825" y2="143" class="line"/>
+  <rect x="830" y="95" width="100" height="95" class="box"/><text x="853" y="128" class="label">结果</text><text x="842" y="154" class="small">Reachable</text><text x="840" y="177" class="small">失败分类</text>
+  <text x="40" y="275" class="small">返回前按输入编号排序：调度可以乱序完成，用户看到的批量结果仍稳定。</text>
+</svg>

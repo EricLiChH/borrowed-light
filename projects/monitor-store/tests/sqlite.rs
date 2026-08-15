@@ -16,7 +16,7 @@ async fn learner_can_replace_memory_with_temporary_sqlite() {
         CheckResult::unreachable_with(&target, CheckFailureKind::Timeout, "deadline exceeded");
 
     repository
-        .save_result(stored.id(), result)
+        .save_result(stored.id(), &result)
         .await
         .expect("result should be stored");
 

@@ -34,10 +34,10 @@ fn main() {
 
 ## 迁移到项目
 
-`MonitorRepository::latest_result` 返回 `Result<Option<CheckResult>, StoreError>`：外层 `Result` 表示存储操作可能失败，内层 `Option` 表示存储正常但还没有检查记录。
+`CheckHistory::latest` 返回 `Option<&CheckResult>`，因为“还没有记录”是正常状态；`MonitorTarget::new` 返回 `Result<MonitorTarget, TargetError>`，因为输入可能违反领域规则。到数据库阶段，两层语义会组合成 `Result<Option<CheckResult>, StoreError>`：外层是操作失败，内层是操作成功但没有记录。
 
 ```sh
-cargo test -p monitor-store
+cargo test -p monitor-domain
 ```
 
 完成 `04_result` 后，给自己解释：为什么不能把 `Result<Option<T>, E>` 简化成一个布尔值？

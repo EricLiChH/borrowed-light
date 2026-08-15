@@ -18,6 +18,7 @@ fn learner_can_check_a_json_target_list_with_bounded_concurrency() {
     fs::write(&config_path, config.to_string()).expect("temporary config should be written");
 
     let output = Command::new(env!("CARGO_BIN_EXE_monitor"))
+        .env("MONITOR_DISABLE_PROXY", "1")
         .args([
             "batch",
             config_path

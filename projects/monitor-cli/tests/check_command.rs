@@ -7,6 +7,7 @@ use std::thread;
 fn learner_can_check_a_local_website_from_the_cli() {
     let url = serve_once();
     let output = Command::new(env!("CARGO_BIN_EXE_monitor"))
+        .env("MONITOR_DISABLE_PROXY", "1")
         .args([
             "check",
             "local",

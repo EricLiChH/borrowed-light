@@ -4,19 +4,11 @@
 
 | 阶段 | 时间 | 必做内容 | 可检查产物 |
 |---|---:|---|---|
-| 核心能力恢复 | 8–10 小时 | 诊断、所有权三视图、`Option`/`Result`、trait、6 个 Rustlings | 领域模型、存储接缝、全部练习通过 |
+| 核心能力恢复 | 8–10 小时 | 诊断、所有权三视图、值/集合/模块、`Option`/`Result`、生命周期、trait、练习 01–11 | 领域模型、同步 trait、11 个核心练习通过 |
 | CLI 实战 | 8–10 小时 | 参数、JSON、错误边界、顺序基线、批量检查、集成测试、安装 | `monitor` 可安装并通过离线测试 |
 | 异步网络与 Web | 14–20 小时 | Future、受控并发、总超时、有限重试、错误分类、Axum、SQLite、追踪、关闭 | CLI 并发检查器与持久化 HTTP API |
 
-```mermaid
-flowchart LR
-    A["诊断"] --> B["核心类型与所有权"]
-    B --> C["CLI 顺序基线"]
-    C --> D["Tokio + reqwest"]
-    D --> E["Axum + 内存存储"]
-    E --> F["SQLite + SQLx"]
-    F --> G["离线全量验收"]
-```
+![标准路径依次经过诊断、核心能力、顺序 CLI、异步网络、Web、SQLite 和离线验收](../assets/architecture/standard-path.svg)
 
 ## 每个学习单元的交互循环
 
@@ -36,16 +28,16 @@ cd exercises
 rustlings
 ```
 
-完成 6 个练习，并让 `cargo test -p monitor-domain -p monitor-store` 通过。你应能解释 move 与 borrow、`Result<Option<T>, E>`、以及为什么存储 trait 是接缝而不是装饰。
+完成练习 01–11，并让 `cargo test -p monitor-domain` 通过。你应能解释 move 与 borrow、slice、生命周期关系、`Result<Option<T>, E>`，以及为什么 trait 接缝不应提前泄露数据库或 async。
 
 ### 门 2：CLI
 
 ```sh
-cargo test -p monitor-cli
-cargo run -p monitor-cli --bin monitor -- --help
+cargo test -p monitor-cli --test sync_command
+cargo run -p monitor-cli --bin monitor-sync -- --help
 ```
 
-完成 CLI 章节的五个实验。你应能区分参数解析、领域校验、网络调度和输出格式各自的责任。
+完成 CLI 章节的五个实验。此时只使用顺序阻塞客户端，不需要 Tokio；你应能区分参数解析、领域校验、HTTP 检查和输出格式各自的责任。
 
 ### 门 3：异步 Web
 

@@ -1,34 +1,44 @@
-# 用 trait 建立可替换的存储接缝
+# 用 trait 建立第一个可替换接缝
 
 | 任务 | 概念 | 预计时间 | 项目产物 |
 |---|---|---:|---|
-| 让内存与 SQLite 共用调用方式 | trait、泛型、trait object、集成测试 | 120 分钟 | `MonitorRepository` 接口和两个适配器 |
+| 让内存目标列表共用读取方式 | trait、泛型、借用、集成测试 | 120 分钟 | 同步 `TargetSource` 接口 |
 
-trait 在这里不是为了“展示抽象”，而是为了建立真实接缝（seam）：Web 路由只学习一组小接口，存储复杂度留在适配器内部。
+这里暂时不出现 `async`、`Send + Sync` 或数据库。先用一个同步 trait 学会：调用者只依赖能力，具体集合隐藏在实现之后。
 
-![存储接缝：调用者只依赖 MonitorRepository，内存和 SQLite 隐藏各自实现](../assets/architecture/repository-seam.svg)
+```rust
+#[derive(Debug)]
+struct Target { name: String }
 
-```rust,ignore
-#[async_trait]
-pub trait MonitorRepository: Send + Sync {
-    async fn add_target(&self, target: MonitorTarget) -> Result<StoredTarget, StoreError>;
-    async fn get_target(&self, id: i64) -> Result<Option<StoredTarget>, StoreError>;
-    async fn save_result(&self, id: i64, result: CheckResult) -> Result<(), StoreError>;
+trait TargetSource {
+    fn latest(&self) -> Option<&Target>;
+}
+
+impl TargetSource for Vec<Target> {
+    fn latest(&self) -> Option<&Target> {
+        self.last()
+    }
+}
+
+fn latest_name(source: &impl TargetSource) -> Option<&str> {
+    source.latest().map(|target| target.name.as_str())
+}
+
+fn main() {
+    let targets = vec![Target { name: "Rust".into() }];
+    assert_eq!(latest_name(&targets), Some("Rust"));
 }
 ```
 
-先预测：若删除这个 trait，哪些 `add/get/save` 规则会散落到 Axum handler 和测试中？如果答案是“几乎没有”，这个模块还不够深。
+先预测：为什么返回 `Option<&Target>` 而不是 clone 一份？`impl TargetSource` 与 `&dyn TargetSource` 各自把什么决定留给编译期或运行期？
 
-## 两个适配器才是真接缝
+## 接缝是否值得存在
 
-- `InMemoryRepository`：反馈快，适合共享状态和 HTTP 行为测试。
-- `SqliteRepository`：负责建表、行转换、错误映射与持久化。
-
-测试只调用 `MonitorRepository` 的公开接口，不读取内部 `RwLock`，也不绕过接口直接查询数据库。
+一个 trait 应该隐藏真实复杂度，而不是把每个结构体都包装一层。本阶段的接口很小，目的是练习借用与替换；到 Web 阶段，`MonitorRepository` 才会升级为异步接口，并真正隐藏 `RwLock`、migration、SQL 和行映射。
 
 ```sh
-cargo test -p monitor-store --test in_memory
-cargo test -p monitor-store --test sqlite
+cd exercises
+rustlings run 05_repository
 ```
 
-完成 `05_repository`，然后尝试在不改调用者的情况下替换适配器。
+先让练习失败，再按“方向 → API → 形状”三层提示修复。完成标准：能在不 clone `Target` 的情况下替换数据来源，并解释对象安全（object safety）为什么会影响 `dyn Trait` 的方法形状。

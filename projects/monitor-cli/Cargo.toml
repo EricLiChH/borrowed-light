@@ -10,6 +10,10 @@ publish = false
 name = "monitor"
 path = "src/main.rs"
 
+[[bin]]
+name = "monitor-sync"
+path = "src/bin/monitor_sync.rs"
+
 [dependencies]
 clap.workspace = true
 monitor-core = { path = "../monitor-core" }

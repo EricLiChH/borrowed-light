@@ -84,11 +84,9 @@ async fn run_check(
         .await?
         .ok_or_else(|| ApiError::not_found(format!("target {target_id} was not found")))?;
     let result = state.checker.check(stored.target()).await;
-    state
-        .repository
-        .save_result(target_id, result.clone())
-        .await?;
-    Ok(Json(check_view(target_id, &result)))
+    let view = check_view(target_id, &result);
+    state.repository.save_result(target_id, &result).await?;
+    Ok(Json(view))
 }
 
 async fn latest_check(

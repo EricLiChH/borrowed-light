@@ -90,7 +90,7 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 Duration::from_millis(100),
                 1,
             )?;
-            let checker = HealthChecker::new(reqwest::Client::new(), policy);
+            let checker = HealthChecker::new(build_client()?, policy);
             let result = checker.check(&target).await;
             let output = check_output(&result);
             println!("{}", serde_json::to_string_pretty(&output)?);
@@ -113,13 +113,21 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 Duration::from_millis(100),
                 concurrency,
             )?;
-            let checker = HealthChecker::new(reqwest::Client::new(), policy);
+            let checker = HealthChecker::new(build_client()?, policy);
             let results = checker.check_all(&targets).await;
             let output = results.iter().map(check_output).collect::<Vec<_>>();
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
     Ok(())
+}
+
+fn build_client() -> Result<reqwest::Client, reqwest::Error> {
+    let mut builder = reqwest::Client::builder();
+    if std::env::var_os("MONITOR_DISABLE_PROXY").is_some() {
+        builder = builder.no_proxy();
+    }
+    builder.build()
 }
 
 fn check_output(result: &monitor_domain::CheckResult) -> CheckOutput<'_> {

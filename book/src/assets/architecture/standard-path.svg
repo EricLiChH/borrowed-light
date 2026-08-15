@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="230" viewBox="0 0 960 230" role="img" aria-labelledby="title desc">
+  <title id="title">Rust Cookbook 标准路径</title>
+  <desc id="desc">从左至右依次为诊断、核心能力、顺序 CLI、异步网络、Axum Web、SQLite 持久化和离线验收，每一步由箭头连接。</desc>
+  <rect width="960" height="230" fill="#fff"/>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#222"/></marker></defs>
+  <style>.box{fill:none;stroke:#222;stroke-width:2;rx:10}.line{stroke:#222;stroke-width:2;marker-end:url(#arrow)}.label{font:16px system-ui,sans-serif;fill:#222}.small{font:14px system-ui,sans-serif;fill:#222}</style>
+  <text x="40" y="38" class="label">知识依赖与项目演进使用同一个方向</text>
+  <rect x="30" y="85" width="100" height="65" class="box"/><text x="63" y="123" class="label">诊断</text>
+  <line x1="135" y1="118" x2="165" y2="118" class="line"/>
+  <rect x="170" y="85" width="110" height="65" class="box"/><text x="191" y="113" class="label">核心能力</text><text x="190" y="136" class="small">类型 / 所有权</text>
+  <line x1="285" y1="118" x2="315" y2="118" class="line"/>
+  <rect x="320" y="85" width="110" height="65" class="box"/><text x="339" y="113" class="label">顺序 CLI</text><text x="340" y="136" class="small">阻塞式基线</text>
+  <line x1="435" y1="118" x2="465" y2="118" class="line"/>
+  <rect x="470" y="85" width="110" height="65" class="box"/><text x="487" y="113" class="label">异步网络</text><text x="487" y="136" class="small">Tokio / reqwest</text>
+  <line x1="585" y1="118" x2="615" y2="118" class="line"/>
+  <rect x="620" y="85" width="100" height="65" class="box"/><text x="639" y="113" class="label">Axum Web</text><text x="642" y="136" class="small">内存存储</text>
+  <line x1="725" y1="118" x2="755" y2="118" class="line"/>
+  <rect x="760" y="85" width="90" height="65" class="box"/><text x="779" y="113" class="label">SQLite</text><text x="781" y="136" class="small">migration</text>
+  <line x1="855" y1="118" x2="875" y2="118" class="line"/>
+  <rect x="880" y="85" width="60" height="65" class="box"/><text x="894" y="113" class="label">离线</text><text x="894" y="136" class="small">验收</text>
+  <text x="40" y="195" class="small">阶段门只向右引入新机制；配方可用于回查，但不提前要求后续框架知识。</text>
+</svg>

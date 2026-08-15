@@ -30,7 +30,7 @@ cargo test --workspace
 运行贯穿项目：
 
 ```sh
-cargo run -p monitor-cli --bin monitor -- target Rust https://www.rust-lang.org
+cargo run -p monitor-cli --bin monitor-sync -- target Rust https://www.rust-lang.org
 cargo run -p monitor-cli --bin monitor -- check Rust https://www.rust-lang.org
 cargo run -p monitor-web
 ```

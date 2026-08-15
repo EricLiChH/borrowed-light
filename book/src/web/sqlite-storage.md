@@ -6,6 +6,21 @@
 
 阶段顺序很重要：先用 `InMemoryRepository` 学共享状态和接口，再让 `SqliteRepository` 接管 SQL、migration、行转换与数据库错误。Axum 路由不需要改变。
 
+![存储接缝：Axum 与契约测试依赖 MonitorRepository，内存和 SQLite 隐藏各自实现](../assets/architecture/repository-seam.svg)
+
+此时已经学过 Future 与 `Send`/`Sync`，才把核心阶段的同步 trait 升级为异步存储边界：
+
+```rust,ignore
+#[async_trait]
+pub trait MonitorRepository: Send + Sync {
+    async fn add_target(&self, target: MonitorTarget) -> Result<StoredTarget, StoreError>;
+    async fn latest_result(&self, id: i64) -> Result<Option<CheckResult>, StoreError>;
+    async fn save_result(&self, id: i64, result: &CheckResult) -> Result<(), StoreError>;
+}
+```
+
+`save_result` 借用结果并验证它属于同一个 target；内存和 SQLite 运行同一组契约测试，避免“可替换”只停留在类型层面。
+
 ```rust,ignore
 let repository = SqliteRepository::connect("sqlite://monitor.db").await?;
 let router = app(Arc::new(repository), checker);
@@ -15,6 +30,8 @@ let router = app(Arc::new(repository), checker);
 
 ```sh
 cargo test -p monitor-store --test sqlite
+cargo test -p monitor-store --test contract
+cargo test -p monitor-web --test sqlite_api
 ```
 
 自动测试不依赖本机已经安装 SQLite 命令行工具，也不共享开发数据库。

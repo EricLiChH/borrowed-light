@@ -4,6 +4,8 @@
 |---|---|---:|---|
 | 把目标 URL 变成检查结果 | 复用 Client、HTTP 状态、传输错误 | 120 分钟 | `HealthChecker::check` |
 
+上一阶段的 `monitor-sync` 使用阻塞客户端并逐个检查。现在才引入 Tokio，把同一输入/输出协议迁移到 `monitor`：单目标先保持相同行为，再让下一章加入并发窗口。
+
 项目把一个 `reqwest::Client` 注入 `HealthChecker` 并反复使用。Client 内部维护连接池；每次检查重新创建 Client 会丢失复用价值，也让测试和配置分散。
 
 ```rust,ignore
@@ -19,6 +21,7 @@ HTTP 500 仍然说明服务器返回了 HTTP 响应，因此当前领域结果�
 
 ```sh
 cargo test -p monitor-core --test check_success
+cargo test -p monitor-cli --test check_command
 ```
 
 故意把测试服务器改成不返回响应，观察下一章如何在不真实等待两秒的情况下验证超时。
