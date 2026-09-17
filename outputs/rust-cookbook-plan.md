@@ -92,7 +92,7 @@ flowchart LR
 
 纯网页沙箱的安装体验最好，但依赖运行隔离、资源限制、依赖缓存、账户/进度同步和安全维护。v1 先验证内容与学习闭环；若大量目标读者不能安装本地工具链，再将网页执行环境列为 v2。
 
-课程技术底座已确定为 mdBook + Rustlings 社区习题集 + 单仓库 Cargo workspace。仓库通过 `rust-toolchain.toml` 固定 Rust 1.88.0，并在本地检查与 CI 中使用 mdBook 0.5.4 和 Rustlings 6.5.0。
+课程技术底座已确定为 mdBook + Rustlings 社区习题集 + 单仓库 Cargo workspace。仓库通过 `rust-toolchain.toml` 固定 Rust 1.94.0，并在本地检查与 CI 中使用 mdBook 0.5.4 和 Rustlings 6.5.0。
 
 ## 5. 内容地图
 

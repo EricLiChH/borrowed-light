@@ -10,7 +10,7 @@
 
 ## 本地验证
 
-项目固定使用 Rust 1.88、mdBook 0.5.4 和 Rustlings 6.5.0。
+项目固定使用 Rust 1.94、mdBook 0.5.4 和 Rustlings 6.5.0。
 
 ```sh
 cargo install mdbook --version 0.5.4 --locked
