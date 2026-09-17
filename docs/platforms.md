@@ -1,6 +1,6 @@
 # macOS、Linux 与 Windows 本地验证
 
-仓库锁定 Rust 1.88.0；完整维护检查还需要 Python 3。先安装 Rustup，再安装课程工具：
+仓库锁定 Rust 1.94.0；完整维护检查还需要 Python 3。先安装 Rustup，再安装课程工具：
 
 ```sh
 cargo install mdbook --version 0.5.4 --locked
