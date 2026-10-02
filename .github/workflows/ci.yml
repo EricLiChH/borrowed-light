@@ -71,6 +71,8 @@ jobs:
           command -v rustlings >/dev/null || cargo install rustlings --version 6.5.0 --locked
       - name: Check Markdown links and anchors
         run: python3 scripts/check_links.py
+      - name: Check that no credential is tracked
+        run: python3 scripts/check_secrets.py
       - name: Test and build the book
         run: |
           mdbook test book

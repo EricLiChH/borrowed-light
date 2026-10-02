@@ -28,6 +28,19 @@ Windows PowerShell 使用：
 
 提交前请确认格式、Clippy、Cargo 测试、mdBook 测试/构建以及 Rustlings 练习与参考解全部通过。
 
+## 密钥与本地配置
+
+**不要提交任何密钥。** 需要本地密钥时（例如把教材的 AI 辅导提示词接到某个 API 上），按这个流程：
+
+§§§sh
+cp .env.example .env      # .env 已被 .gitignore 忽略
+$EDITOR .env              # 填入真实值
+§§§
+
+- §.env.example§ 只放变量名与说明，可以入库；§.env§ 绝不入库。
+- §scripts/check_secrets.py§ 扫描**已跟踪**文件里的疑似凭据，并在 §scripts/check.sh§ 与 CI 中运行。它挡得住"密钥已经进了仓库"，挡不住你把它粘贴到 issue、聊天或截图里。
+- 一旦密钥出现在任何公开位置（提交、日志、聊天、截图），**去服务商控制台轮换**——加一条 ignore 规则不会让已经泄露的密钥失效。
+
 ## 内容约定
 
 - 中文主讲，关键术语首次出现时补充英文。
