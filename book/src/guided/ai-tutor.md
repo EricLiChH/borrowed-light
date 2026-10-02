@@ -102,3 +102,55 @@
 3. **一章结束时**：用出题模式做闭卷检验，答错的地方写进你的学习日志。
 
 真正需要记住的不是答案，而是你曾经错误预测过哪些行为。
+
+---
+
+## 把它接到命令行：§scripts/tutor.py§
+
+上面的提示词是手动复制粘贴的。仓库里还有一个把它变成命令的脚本，用 Kimi 开放平台驱动：
+
+§§§sh
+cp .env.example .env        # 填入 KIMI_API_KEY（.env 已被忽略）
+python3 scripts/tutor.py --check
+§§§
+
+§check§ 会验证密钥与端点，并列出可用模型：
+
+§§§text
+端点 OK：https://api.kimi.com/coding/v1
+可用模型：kimi-for-coding, kimi-for-coding-highspeed, k3, k3-256k
+§§§
+
+四种用法：
+
+§§§sh
+# 1) 单次提问，带上正在读的章节作为上下文
+python3 scripts/tutor.py ask --chapter ownership "为什么 move 之后原绑定不能再用？"
+
+# 2) 交互式连续对话
+python3 scripts/tutor.py chat --chapter result-option
+
+# 3) 让它评审你的代码（对应「代码评审模式」）
+python3 scripts/tutor.py review --code src/main.rs
+
+# 4) 换一种模式：explain / quiz / debug
+python3 scripts/tutor.py ask --mode quiz --chapter lifetimes-generics-closures "出题"
+§§§
+
+真实输出（§--chapter ownership§，教练模式）：
+
+§§§text
+因为移动后堆上的资源只归新绑定所有：若原绑定还能用且也负责释放，析构时同一资源就会
+被释放两次。所以编译器在移动那一刻就把原绑定标记为失效——这是规则 1（一个值只有一个
+所有者）加规则 2（离开作用域时释放）的直接推论，你看到的 E0382 就是它替你算这笔账的结果。
+§§§
+
+几点说明：
+
+- **模式与本章的六种提问模式一一对应**：§coach§（默认，苏格拉底式）、§explain§、§review§、§quiz§、§debug§。
+- **§--chapter§ 会把整章正文作为上下文发过去**，所以它的回答会和教材的术语、示例保持一致。
+- **每次问答都会记到 §work/§**（已在 §.gitignore§ 里），可以回头翻自己卡在哪。
+- 密钥只从 §.env§ 读取，脚本本身不含任何密钥；§scripts/check_secrets.py§ 会阻止密钥进入仓库。
+
+> 如果 §--check§ 报 401：先确认 §KIMI_BASE_URL§。§sk-kimi-§ 前缀的密钥属于 Kimi Code，
+> 端点是 §https://api.kimi.com/coding/v1§；指向 Moonshot 的端点会被判为无效认证。
