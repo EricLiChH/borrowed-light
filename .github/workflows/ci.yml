@@ -7,29 +7,78 @@ on:
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  verify:
-    name: Verify (${{ matrix.os }})
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.0
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  lint:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.0
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+
+  test:
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.94.0
-          components: rustfmt, clippy
-      - name: Install course tools
+          toolchain: 1.99.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked --workspace
+
+  course:
+    name: Course material
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.0
+      - uses: Swatinem/rust-cache@v2
+      # mdBook and rustlings are compiled from source, which used to cost more
+      # than the checks themselves. Cache the installed binaries under a key
+      # that names both pinned versions.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: course-tools-${{ runner.os }}-mdbook-0.5.4-rustlings-6.5.0
+      - name: Install course tools when missing
         run: |
-          cargo install mdbook --version 0.5.4 --locked
-          cargo install rustlings --version 6.5.0 --locked
-      - name: Verify on macOS or Linux
-        if: runner.os != 'Windows'
-        run: sh scripts/check.sh
-      - name: Verify on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./scripts/check.ps1
+          command -v mdbook >/dev/null || cargo install mdbook --version 0.5.4 --locked
+          command -v rustlings >/dev/null || cargo install rustlings --version 6.5.0 --locked
+      - name: Check Markdown links and anchors
+        run: python3 scripts/check_links.py
+      - name: Test and build the book
+        run: |
+          mdbook test book
+          mdbook build book
+      - name: Check the exercises
+        working-directory: exercises
+        run: rustlings dev check
+
+  # scripts/check.sh runs the same commands in sequence for maintainers who want
+  # one local entry point. This workflow splits them into parallel jobs, so a
+  # formatting failure no longer waits behind the three-OS test matrix.

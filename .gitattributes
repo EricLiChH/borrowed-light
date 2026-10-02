@@ -1,0 +1,10 @@
+# Normalize every text file to LF in the repository, whatever the platform.
+* text=auto eol=lf
+
+# Images are copied byte for byte.
+*.png binary
+*.jpg binary
+*.ico binary
+
+# Diagrams are diffable text.
+*.svg text

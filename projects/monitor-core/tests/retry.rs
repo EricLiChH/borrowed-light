@@ -1,23 +1,26 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+mod common;
+
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use monitor_core::{CheckPolicy, HealthChecker};
+use monitor_core::{Backoff, CheckPolicy, HealthChecker};
 use monitor_domain::{CheckFailureKind, CheckOutcome, MonitorTarget};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpListener;
+
+/// A policy that makes the given number of attempts with the given wait.
+fn policy(attempts: usize, backoff: Backoff) -> CheckPolicy {
+    CheckPolicy::builder()
+        .total_timeout(Duration::from_secs(2))
+        .max_attempts(common::nonzero(attempts))
+        .backoff(backoff)
+        .concurrency(common::nonzero(1))
+        .build()
+}
 
 #[tokio::test]
 async fn learner_can_retry_a_transient_transport_failure() {
-    let (url, requests) = serve_failure_then_success().await;
+    let (url, requests) = common::serve_failure_then_success().await;
     let target = MonitorTarget::new("flaky local", url).expect("local URL should be valid");
-    let policy = CheckPolicy::new(Duration::from_secs(1), 2, Duration::ZERO, 1)
-        .expect("policy should be valid");
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .expect("test client should build");
-    let checker = HealthChecker::new(client, policy);
+    let checker = HealthChecker::new(common::client(), policy(2, Backoff::none()));
 
     let result = checker.check(&target).await;
 
@@ -26,16 +29,72 @@ async fn learner_can_retry_a_transient_transport_failure() {
 }
 
 #[tokio::test]
+async fn learner_retries_a_transient_server_error() {
+    // 503 means "try again", so the second attempt is allowed to succeed.
+    let (url, requests) = common::serve_status_sequence(&[503, 200]).await;
+    let target = MonitorTarget::new("warming up", url).expect("local URL should be valid");
+    let checker = HealthChecker::new(common::client(), policy(2, Backoff::none()));
+
+    let result = checker.check(&target).await;
+
+    assert_eq!(result.outcome(), &CheckOutcome::Reachable { status: 200 });
+    assert_eq!(requests.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn learner_does_not_retry_a_client_error() {
+    // 404 is a decision, not a hiccup: asking again would only waste the budget.
+    let (url, requests) = common::serve_status_sequence(&[404]).await;
+    let target = MonitorTarget::new("missing", url).expect("local URL should be valid");
+    let checker = HealthChecker::new(common::client(), policy(3, Backoff::none()));
+
+    let result = checker.check(&target).await;
+
+    assert_eq!(result.outcome(), &CheckOutcome::Reachable { status: 404 });
+    assert_eq!(requests.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn learner_still_sees_the_status_when_a_server_error_never_clears() {
+    let (url, requests) = common::serve_status_sequence(&[500, 500]).await;
+    let target = MonitorTarget::new("broken", url).expect("local URL should be valid");
+    let checker = HealthChecker::new(common::client(), policy(2, Backoff::none()));
+
+    let result = checker.check(&target).await;
+
+    // A response is a response: the site answered, it just answered badly.
+    assert_eq!(result.outcome(), &CheckOutcome::Reachable { status: 500 });
+    assert_eq!(requests.load(Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn learner_honours_retry_after_and_tries_again() {
+    // The hint is zero here, so the retry is immediate and the test needs no
+    // clock. The precedence rule itself - the hint beats the computed backoff,
+    // and the hint is capped - is unit-tested in src/checker.rs, where it needs
+    // neither a socket nor a timer.
+    let url = common::serve_retry_after(0).await;
+    let target = MonitorTarget::new("rate limited", url).expect("local URL should be valid");
+    let checker = HealthChecker::new(
+        common::client(),
+        CheckPolicy::builder()
+            .total_timeout(Duration::from_secs(10))
+            .max_attempts(common::nonzero(2))
+            .backoff(Backoff::fixed(Duration::from_millis(50)))
+            .concurrency(common::nonzero(1))
+            .build(),
+    );
+
+    let result = checker.check(&target).await;
+
+    assert_eq!(result.outcome(), &CheckOutcome::Reachable { status: 200 });
+}
+
+#[tokio::test]
 async fn learner_does_not_retry_a_redirect_policy_error() {
-    let (url, requests) = serve_redirect_loop().await;
+    let (url, requests) = common::serve_redirect_loop().await;
     let target = MonitorTarget::new("looping local", url).expect("local URL should be valid");
-    let policy = CheckPolicy::new(Duration::from_secs(2), 3, Duration::ZERO, 1)
-        .expect("policy should be valid");
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .expect("test client should build");
-    let checker = HealthChecker::new(client, policy);
+    let checker = HealthChecker::new(common::client(), policy(3, Backoff::none()));
 
     let result = checker.check(&target).await;
 
@@ -46,64 +105,7 @@ async fn learner_does_not_retry_a_redirect_policy_error() {
             ..
         }
     ));
+    // One attempt is at most eleven requests: the original plus reqwest's ten redirects.
     let requests = requests.load(Ordering::SeqCst);
     assert!((2..=11).contains(&requests));
-}
-
-async fn serve_failure_then_success() -> (String, Arc<AtomicUsize>) {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("test server should bind");
-    let address = listener
-        .local_addr()
-        .expect("listener should have an address");
-    let requests = Arc::new(AtomicUsize::new(0));
-    let observed_requests = Arc::clone(&requests);
-
-    tokio::spawn(async move {
-        for attempt in 1..=2 {
-            let (mut stream, _) = listener.accept().await.expect("server should accept");
-            observed_requests.fetch_add(1, Ordering::SeqCst);
-            let mut request = [0_u8; 1024];
-            let _ = stream.read(&mut request).await;
-            if attempt == 2 {
-                stream
-                    .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
-                    .await
-                    .expect("server should reply");
-            }
-        }
-    });
-
-    (format!("http://{address}"), requests)
-}
-
-async fn serve_redirect_loop() -> (String, Arc<AtomicUsize>) {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("test server should bind");
-    let address = listener
-        .local_addr()
-        .expect("listener should have an address");
-    let url = format!("http://{address}/loop");
-    let requests = Arc::new(AtomicUsize::new(0));
-    let observed_requests = Arc::clone(&requests);
-    let location = url.clone();
-
-    tokio::spawn(async move {
-        for _ in 0..32 {
-            let Ok((mut stream, _)) = listener.accept().await else {
-                break;
-            };
-            observed_requests.fetch_add(1, Ordering::SeqCst);
-            let mut request = [0_u8; 1024];
-            let _ = stream.read(&mut request).await;
-            let response = format!(
-                "HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-            );
-            let _ = stream.write_all(response.as_bytes()).await;
-        }
-    });
-
-    (url, requests)
 }

@@ -1,181 +1,144 @@
 //! HTTP interface for the course project.
+//!
+//! # Why the router is generic
+//!
+//! The router used to take `Arc<dyn MonitorRepository>`. That works, but it
+//! forces the repository trait to stay object-safe, which in turn forces every
+//! async method to box its future. Now that the trait returns
+//! `impl Future + Send`, `dyn` is no longer available, so the state carries the
+//! concrete adapter type instead.
+//!
+//! Callers do not notice: `with_state` erases `R`, so `app` still returns one
+//! concrete [`Router`]. Tests pass an in-memory adapter, `main` passes the
+//! SQLite one, and neither pays for a boxed future per query.
+
+mod dto;
+mod error;
 
 use std::sync::Arc;
 
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 use monitor_core::HealthChecker;
-use monitor_domain::{CheckFailureKind, CheckOutcome, CheckResult, MonitorTarget};
-use monitor_store::{MonitorRepository, StoreError, StoredTarget};
-use serde::{Deserialize, Serialize};
+use monitor_domain::MonitorTarget;
+use monitor_store::MonitorRepository;
 
-/// Builds the HTTP router around repository and checker interfaces.
-pub fn app(repository: Arc<dyn MonitorRepository>, checker: HealthChecker) -> Router {
+use crate::dto::{CheckView, CreateTarget, TargetView};
+use crate::error::ApiError;
+
+/// Builds the HTTP router around a repository and a checker.
+///
+/// The repository is shared through an [`Arc`] because axum clones the state for
+/// every request.
+pub fn app<R>(repository: Arc<R>, checker: HealthChecker) -> Router
+where
+    R: MonitorRepository + 'static,
+{
     Router::new()
         .route("/healthz", get(healthz))
-        .route("/targets", get(list_targets).post(create_target))
-        .route("/targets/{id}/checks", axum::routing::post(run_check))
-        .route("/targets/{id}/checks/latest", get(latest_check))
+        .route("/targets", get(list_targets::<R>).post(create_target::<R>))
+        .route("/targets/{id}", get(get_target::<R>))
+        .route("/targets/{id}/checks", post(run_check::<R>))
+        .route("/targets/{id}/checks/latest", get(latest_check::<R>))
         .with_state(AppState {
             repository,
             checker,
         })
 }
 
-#[derive(Clone)]
-struct AppState {
-    repository: Arc<dyn MonitorRepository>,
+struct AppState<R> {
+    repository: Arc<R>,
     checker: HealthChecker,
 }
 
-#[derive(Debug, Deserialize)]
-struct CreateTarget {
-    name: String,
-    url: String,
-}
-
-#[derive(Debug, Serialize)]
-struct TargetView {
-    id: i64,
-    name: String,
-    url: String,
-}
-
-#[derive(Debug, Serialize)]
-struct CheckView {
-    target_id: i64,
-    name: String,
-    url: String,
-    reachable: bool,
-    status: Option<u16>,
-    failure: Option<&'static str>,
-    reason: Option<String>,
+// Written out on purpose. `#[derive(Clone)]` would add a `R: Clone` bound, and a
+// repository never needs to be cloneable just because the state is: sharing
+// already happens through the `Arc`.
+impl<R> Clone for AppState<R> {
+    fn clone(&self) -> Self {
+        Self {
+            repository: Arc::clone(&self.repository),
+            checker: self.checker.clone(),
+        }
+    }
 }
 
 async fn healthz() -> StatusCode {
     StatusCode::NO_CONTENT
 }
 
-async fn create_target(
-    State(state): State<AppState>,
+async fn create_target<R>(
+    State(state): State<AppState<R>>,
     Json(input): Json<CreateTarget>,
-) -> Result<(StatusCode, Json<TargetView>), ApiError> {
-    let target = MonitorTarget::new(input.name, input.url)
-        .map_err(|error| ApiError::bad_request(error.to_string()))?;
+) -> Result<(StatusCode, Json<TargetView>), ApiError>
+where
+    R: MonitorRepository + 'static,
+{
+    // `?` converts TargetError into a 400 with the code `invalid_target`,
+    // because ApiError implements From<TargetError>.
+    let target = MonitorTarget::new(input.name, input.url)?;
     let stored = state.repository.add_target(target).await?;
-    Ok((StatusCode::CREATED, Json(target_view(&stored))))
+    Ok((StatusCode::CREATED, Json(TargetView::from(&stored))))
 }
 
-async fn list_targets(State(state): State<AppState>) -> Result<Json<Vec<TargetView>>, ApiError> {
+async fn list_targets<R>(
+    State(state): State<AppState<R>>,
+) -> Result<Json<Vec<TargetView>>, ApiError>
+where
+    R: MonitorRepository + 'static,
+{
     let targets = state.repository.list_targets().await?;
-    Ok(Json(targets.iter().map(target_view).collect()))
+    Ok(Json(targets.iter().map(TargetView::from).collect()))
 }
 
-async fn run_check(
-    State(state): State<AppState>,
+async fn get_target<R>(
+    State(state): State<AppState<R>>,
     Path(target_id): Path<i64>,
-) -> Result<Json<CheckView>, ApiError> {
+) -> Result<Json<TargetView>, ApiError>
+where
+    R: MonitorRepository + 'static,
+{
     let stored = state
         .repository
         .get_target(target_id)
         .await?
         .ok_or_else(|| ApiError::not_found(format!("target {target_id} was not found")))?;
-    let result = state.checker.check(stored.target()).await;
-    let view = check_view(target_id, &result);
-    state.repository.save_result(target_id, &result).await?;
-    Ok(Json(view))
+    Ok(Json(TargetView::from(&stored)))
 }
 
-async fn latest_check(
-    State(state): State<AppState>,
+async fn run_check<R>(
+    State(state): State<AppState<R>>,
     Path(target_id): Path<i64>,
-) -> Result<Json<CheckView>, ApiError> {
+) -> Result<Json<CheckView>, ApiError>
+where
+    R: MonitorRepository + 'static,
+{
+    let stored = state
+        .repository
+        .get_target(target_id)
+        .await?
+        .ok_or_else(|| ApiError::not_found(format!("target {target_id} was not found")))?;
+
+    let result = state.checker.check(stored.target()).await;
+    // Record first, then answer: a client that sees a result can rely on it
+    // being in the history.
+    state.repository.save_result(target_id, &result).await?;
+    Ok(Json(CheckView::new(target_id, &result)))
+}
+
+async fn latest_check<R>(
+    State(state): State<AppState<R>>,
+    Path(target_id): Path<i64>,
+) -> Result<Json<CheckView>, ApiError>
+where
+    R: MonitorRepository + 'static,
+{
     let result = state
         .repository
         .latest_result(target_id)
         .await?
         .ok_or_else(|| ApiError::not_found(format!("target {target_id} has no check result")))?;
-    Ok(Json(check_view(target_id, &result)))
-}
-
-fn target_view(stored: &StoredTarget) -> TargetView {
-    TargetView {
-        id: stored.id(),
-        name: stored.target().name().to_owned(),
-        url: stored.target().url().to_owned(),
-    }
-}
-
-fn check_view(target_id: i64, result: &CheckResult) -> CheckView {
-    match result.outcome() {
-        CheckOutcome::Reachable { status } => CheckView {
-            target_id,
-            name: result.target_name().to_owned(),
-            url: result.target_url().to_owned(),
-            reachable: true,
-            status: Some(*status),
-            failure: None,
-            reason: None,
-        },
-        CheckOutcome::Unreachable { kind, reason } => CheckView {
-            target_id,
-            name: result.target_name().to_owned(),
-            url: result.target_url().to_owned(),
-            reachable: false,
-            status: None,
-            failure: Some(failure_kind_name(*kind)),
-            reason: Some(reason.clone()),
-        },
-    }
-}
-
-const fn failure_kind_name(kind: CheckFailureKind) -> &'static str {
-    match kind {
-        CheckFailureKind::Timeout => "timeout",
-        CheckFailureKind::Connect => "connect",
-        CheckFailureKind::Request => "request",
-    }
-}
-
-struct ApiError {
-    status: StatusCode,
-    message: String,
-}
-
-impl ApiError {
-    fn bad_request(message: impl Into<String>) -> Self {
-        Self {
-            status: StatusCode::BAD_REQUEST,
-            message: message.into(),
-        }
-    }
-
-    fn not_found(message: impl Into<String>) -> Self {
-        Self {
-            status: StatusCode::NOT_FOUND,
-            message: message.into(),
-        }
-    }
-}
-
-impl From<StoreError> for ApiError {
-    fn from(error: StoreError) -> Self {
-        Self {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            message: error.to_string(),
-        }
-    }
-}
-
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        (
-            self.status,
-            Json(serde_json::json!({ "error": self.message })),
-        )
-            .into_response()
-    }
+    Ok(Json(CheckView::new(target_id, &result)))
 }

@@ -1,9 +1,12 @@
-use clap::{Parser, Subcommand};
-use monitor_core::{CheckPolicy, HealthChecker};
-use monitor_domain::{CheckOutcome, MonitorTarget};
-use serde::{Deserialize, Serialize};
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::time::Duration;
+
+use clap::{Parser, Subcommand};
+use monitor_cli::{client, exit, output};
+use monitor_core::{CheckPolicy, HealthChecker};
+use monitor_domain::{CheckResult, MonitorTarget};
+use serde::Deserialize;
 
 #[derive(Debug, Parser)]
 #[command(name = "monitor", about = "网站健康监测器课程项目")]
@@ -22,38 +25,22 @@ enum Command {
         url: String,
         #[arg(long, default_value_t = 5_000)]
         timeout_ms: u64,
-        #[arg(long, default_value_t = 2)]
-        attempts: usize,
+        #[arg(long, default_value_t = NonZeroUsize::MIN.saturating_add(1))]
+        attempts: NonZeroUsize,
     },
     /// Check every target in a JSON file with bounded concurrency.
     Batch {
         file: PathBuf,
         #[arg(long, default_value_t = 5_000)]
         timeout_ms: u64,
-        #[arg(long, default_value_t = 2)]
-        attempts: usize,
-        #[arg(long, default_value_t = 8)]
-        concurrency: usize,
+        #[arg(long, default_value_t = NonZeroUsize::MIN.saturating_add(1))]
+        attempts: NonZeroUsize,
+        #[arg(long, default_value_t = NonZeroUsize::MIN.saturating_add(7))]
+        concurrency: NonZeroUsize,
     },
 }
 
-#[derive(Serialize)]
-struct TargetOutput<'a> {
-    name: &'a str,
-    url: &'a str,
-}
-
-#[derive(Serialize)]
-struct CheckOutput<'a> {
-    name: &'a str,
-    url: &'a str,
-    reachable: bool,
-    status: Option<u16>,
-    failure: Option<&'a str>,
-    reason: Option<&'a str>,
-}
-
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct TargetConfig {
     name: String,
     url: String,
@@ -61,21 +48,25 @@ struct TargetConfig {
 
 #[tokio::main]
 async fn main() {
-    if let Err(error) = run(Cli::parse()).await {
-        eprintln!("error: {error}");
-        std::process::exit(2);
-    }
+    // Two different kinds of "no": the command could not run (2), or it ran and
+    // at least one site was down (1). A script can tell them apart without
+    // parsing the JSON.
+    let code = match run(Cli::parse()).await {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("error: {error}");
+            exit::USAGE
+        }
+    };
+    std::process::exit(code);
 }
 
-async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+async fn run(cli: Cli) -> Result<i32, Box<dyn std::error::Error>> {
     match cli.command {
         Command::Target { name, url } => {
             let target = MonitorTarget::new(name, url)?;
-            let output = TargetOutput {
-                name: target.name(),
-                url: target.url(),
-            };
-            println!("{}", serde_json::to_string_pretty(&output)?);
+            output::print_json(&output::TargetOutput::from(&target))?;
+            Ok(exit::SUCCESS)
         }
         Command::Check {
             name,
@@ -84,16 +75,13 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             attempts,
         } => {
             let target = MonitorTarget::new(name, url)?;
-            let policy = CheckPolicy::new(
-                Duration::from_millis(timeout_ms),
-                attempts,
-                Duration::from_millis(100),
-                1,
-            )?;
-            let checker = HealthChecker::new(build_client()?, policy);
+            let checker = HealthChecker::new(
+                client::async_client()?,
+                policy(timeout_ms, attempts, NonZeroUsize::MIN),
+            );
             let result = checker.check(&target).await;
-            let output = check_output(&result);
-            println!("{}", serde_json::to_string_pretty(&output)?);
+            output::print_json(&output::CheckOutput::from(&result))?;
+            Ok(exit_code_for(std::slice::from_ref(&result)))
         }
         Command::Batch {
             file,
@@ -107,50 +95,35 @@ async fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
                 .into_iter()
                 .map(|config| MonitorTarget::new(config.name, config.url))
                 .collect::<Result<Vec<_>, _>>()?;
-            let policy = CheckPolicy::new(
-                Duration::from_millis(timeout_ms),
-                attempts,
-                Duration::from_millis(100),
-                concurrency,
-            )?;
-            let checker = HealthChecker::new(build_client()?, policy);
+            let checker = HealthChecker::new(
+                client::async_client()?,
+                policy(timeout_ms, attempts, concurrency),
+            );
             let results = checker.check_all(&targets).await;
-            let output = results.iter().map(check_output).collect::<Vec<_>>();
-            println!("{}", serde_json::to_string_pretty(&output)?);
+            let output = results
+                .iter()
+                .map(output::CheckOutput::from)
+                .collect::<Vec<_>>();
+            output::print_json(&output)?;
+            Ok(exit_code_for(&results))
         }
     }
-    Ok(())
 }
 
-fn build_client() -> Result<reqwest::Client, reqwest::Error> {
-    let mut builder = reqwest::Client::builder();
-    if std::env::var_os("MONITOR_DISABLE_PROXY").is_some() {
-        builder = builder.no_proxy();
-    }
-    builder.build()
+/// Builds a policy from the command-line flags, keeping the default backoff.
+fn policy(timeout_ms: u64, attempts: NonZeroUsize, concurrency: NonZeroUsize) -> CheckPolicy {
+    CheckPolicy::builder()
+        .total_timeout(Duration::from_millis(timeout_ms))
+        .max_attempts(attempts)
+        .concurrency(concurrency)
+        .build()
 }
 
-fn check_output(result: &monitor_domain::CheckResult) -> CheckOutput<'_> {
-    match result.outcome() {
-        CheckOutcome::Reachable { status } => CheckOutput {
-            name: result.target_name(),
-            url: result.target_url(),
-            reachable: true,
-            status: Some(*status),
-            failure: None,
-            reason: None,
-        },
-        CheckOutcome::Unreachable { kind, reason } => CheckOutput {
-            name: result.target_name(),
-            url: result.target_url(),
-            reachable: false,
-            status: None,
-            failure: Some(match kind {
-                monitor_domain::CheckFailureKind::Timeout => "timeout",
-                monitor_domain::CheckFailureKind::Connect => "connect",
-                monitor_domain::CheckFailureKind::Request => "request",
-            }),
-            reason: Some(reason),
-        },
+/// Returns the exit code for a batch: success only if every site answered.
+fn exit_code_for(results: &[CheckResult]) -> i32 {
+    if results.iter().all(CheckResult::is_reachable) {
+        exit::SUCCESS
+    } else {
+        exit::CHECK_FAILED
     }
 }

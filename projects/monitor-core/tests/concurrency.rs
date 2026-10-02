@@ -1,29 +1,27 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+mod common;
+
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use monitor_core::{CheckPolicy, HealthChecker};
+use monitor_core::{Backoff, CheckPolicy, HealthChecker};
 use monitor_domain::MonitorTarget;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpListener;
-use tokio::sync::{Notify, Semaphore};
 
 #[tokio::test]
 async fn learner_can_bound_batch_concurrency() {
-    let probe = ConcurrencyProbe::start(4).await;
+    let probe = common::ConcurrencyProbe::start(4).await;
     let targets = (1..=4)
         .map(|number| {
             MonitorTarget::new(format!("local-{number}"), probe.url.clone())
                 .expect("local URL should be valid")
         })
         .collect::<Vec<_>>();
-    let policy = CheckPolicy::new(Duration::from_secs(1), 1, Duration::ZERO, 2)
-        .expect("policy should be valid");
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .expect("test client should build");
-    let checker = HealthChecker::new(client, policy);
+    let policy = CheckPolicy::builder()
+        .total_timeout(Duration::from_secs(1))
+        .max_attempts(common::nonzero(1))
+        .backoff(Backoff::none())
+        .concurrency(common::nonzero(2))
+        .build();
+    let checker = HealthChecker::new(common::client(), policy);
 
     let batch = tokio::spawn(async move { checker.check_all(&targets).await });
     probe.wait_for_accepted(2).await;
@@ -32,7 +30,7 @@ async fn learner_can_bound_batch_concurrency() {
     }
 
     assert_eq!(probe.accepted.load(Ordering::SeqCst), 2);
-    probe.release.add_permits(4);
+    probe.release_all();
 
     let results = batch.await.expect("batch task should finish");
     assert_eq!(results.len(), 4);
@@ -41,19 +39,19 @@ async fn learner_can_bound_batch_concurrency() {
 
 #[tokio::test(start_paused = true)]
 async fn batch_results_keep_input_order_when_responses_finish_out_of_order() {
-    let slow_url = serve_after(Duration::from_secs(10)).await;
-    let fast_url = serve_after(Duration::ZERO).await;
+    let slow_url = common::serve_after(Duration::from_secs(10)).await;
+    let fast_url = common::serve_after(Duration::ZERO).await;
     let targets = vec![
         MonitorTarget::new("slow-first", slow_url).expect("local URL should be valid"),
         MonitorTarget::new("fast-second", fast_url).expect("local URL should be valid"),
     ];
-    let policy = CheckPolicy::new(Duration::from_secs(20), 1, Duration::ZERO, 2)
-        .expect("policy should be valid");
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .expect("test client should build");
-    let checker = HealthChecker::new(client, policy);
+    let policy = CheckPolicy::builder()
+        .total_timeout(Duration::from_secs(20))
+        .max_attempts(common::nonzero(1))
+        .backoff(Backoff::none())
+        .concurrency(common::nonzero(2))
+        .build();
+    let checker = HealthChecker::new(common::client(), policy);
 
     let results = checker.check_all(&targets).await;
 
@@ -62,97 +60,4 @@ async fn batch_results_keep_input_order_when_responses_finish_out_of_order() {
         .map(monitor_domain::CheckResult::target_name)
         .collect::<Vec<_>>();
     assert_eq!(names, vec!["slow-first", "fast-second"]);
-}
-
-async fn serve_after(delay: Duration) -> String {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("test server should bind");
-    let address = listener
-        .local_addr()
-        .expect("listener should have an address");
-    tokio::spawn(async move {
-        let (mut stream, _) = listener.accept().await.expect("server should accept");
-        let mut request = [0_u8; 1024];
-        let _ = stream.read(&mut request).await;
-        tokio::time::sleep(delay).await;
-        stream
-            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
-            .await
-            .expect("server should reply");
-    });
-    format!("http://{address}")
-}
-
-struct ConcurrencyProbe {
-    url: String,
-    accepted: Arc<AtomicUsize>,
-    maximum: Arc<AtomicUsize>,
-    accepted_event: Arc<Notify>,
-    release: Arc<Semaphore>,
-}
-
-impl ConcurrencyProbe {
-    async fn start(expected_requests: usize) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0")
-            .await
-            .expect("test server should bind");
-        let address = listener
-            .local_addr()
-            .expect("listener should have an address");
-        let accepted = Arc::new(AtomicUsize::new(0));
-        let current = Arc::new(AtomicUsize::new(0));
-        let maximum = Arc::new(AtomicUsize::new(0));
-        let accepted_event = Arc::new(Notify::new());
-        let release = Arc::new(Semaphore::new(0));
-
-        let server_accepted = Arc::clone(&accepted);
-        let server_current = Arc::clone(&current);
-        let server_maximum = Arc::clone(&maximum);
-        let server_event = Arc::clone(&accepted_event);
-        let server_release = Arc::clone(&release);
-
-        tokio::spawn(async move {
-            for _ in 0..expected_requests {
-                let (mut stream, _) = listener.accept().await.expect("server should accept");
-                let handler_accepted = Arc::clone(&server_accepted);
-                let handler_current = Arc::clone(&server_current);
-                let handler_maximum = Arc::clone(&server_maximum);
-                let handler_event = Arc::clone(&server_event);
-                let handler_release = Arc::clone(&server_release);
-                tokio::spawn(async move {
-                    let mut request = [0_u8; 1024];
-                    let _ = stream.read(&mut request).await;
-                    handler_accepted.fetch_add(1, Ordering::SeqCst);
-                    let now = handler_current.fetch_add(1, Ordering::SeqCst) + 1;
-                    handler_maximum.fetch_max(now, Ordering::SeqCst);
-                    handler_event.notify_waiters();
-                    let permit = handler_release
-                        .acquire()
-                        .await
-                        .expect("release semaphore should stay open");
-                    permit.forget();
-                    stream
-                        .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
-                        .await
-                        .expect("server should reply");
-                    handler_current.fetch_sub(1, Ordering::SeqCst);
-                });
-            }
-        });
-
-        Self {
-            url: format!("http://{address}"),
-            accepted,
-            maximum,
-            accepted_event,
-            release,
-        }
-    }
-
-    async fn wait_for_accepted(&self, expected: usize) {
-        while self.accepted.load(Ordering::SeqCst) < expected {
-            self.accepted_event.notified().await;
-        }
-    }
 }

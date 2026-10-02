@@ -7,7 +7,6 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
-async-trait.workspace = true
 monitor-domain = { path = "../monitor-domain" }
 sqlx.workspace = true
 tokio.workspace = true

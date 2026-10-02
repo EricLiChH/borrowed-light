@@ -1,7 +1,9 @@
+mod common;
+
 use std::future::pending;
 use std::time::Duration;
 
-use monitor_core::{CheckPolicy, HealthChecker};
+use monitor_core::{Backoff, CheckPolicy, HealthChecker};
 use monitor_domain::{CheckFailureKind, CheckOutcome, MonitorTarget};
 use tokio::net::TcpListener;
 use tokio::time::Instant;
@@ -21,13 +23,15 @@ async fn learner_can_classify_a_timeout_without_really_waiting() {
 
     let target = MonitorTarget::new("slow local", format!("http://{address}"))
         .expect("local URL should be valid");
-    let policy = CheckPolicy::new(Duration::from_secs(2), 1, Duration::ZERO, 1)
-        .expect("policy should be valid");
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .expect("test client should build");
-    let checker = HealthChecker::new(client, policy);
+    let checker = HealthChecker::new(
+        common::client(),
+        CheckPolicy::builder()
+            .total_timeout(Duration::from_secs(2))
+            .max_attempts(common::nonzero(1))
+            .backoff(Backoff::none())
+            .concurrency(common::nonzero(1))
+            .build(),
+    );
 
     let result = checker.check(&target).await;
 
@@ -41,7 +45,10 @@ async fn learner_can_classify_a_timeout_without_really_waiting() {
 }
 
 #[tokio::test(start_paused = true)]
-async fn total_timeout_includes_retry_backoff() {
+async fn the_total_deadline_covers_retry_backoff() {
+    // Nothing is listening, and each retry wants to wait ten seconds. The two
+    // second deadline has to win, otherwise a batch of dead hosts would take
+    // attempts times backoff to give up.
     let listener = TcpListener::bind("127.0.0.1:0")
         .await
         .expect("test port should bind");
@@ -52,13 +59,15 @@ async fn total_timeout_includes_retry_backoff() {
 
     let target = MonitorTarget::new("closed local port", format!("http://{address}"))
         .expect("local URL should be valid");
-    let policy = CheckPolicy::new(Duration::from_secs(2), 3, Duration::from_secs(10), 1)
-        .expect("policy should be valid");
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .expect("test client should build");
-    let checker = HealthChecker::new(client, policy);
+    let checker = HealthChecker::new(
+        common::client(),
+        CheckPolicy::builder()
+            .total_timeout(Duration::from_secs(2))
+            .max_attempts(common::nonzero(3))
+            .backoff(Backoff::fixed(Duration::from_secs(10)))
+            .concurrency(common::nonzero(1))
+            .build(),
+    );
     let started = Instant::now();
 
     let result = checker.check(&target).await;
