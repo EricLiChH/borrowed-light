@@ -36,9 +36,17 @@ fn main() {
 
 一个 trait 应该隐藏真实复杂度，而不是把每个结构体都包装一层。本阶段的接口很小，目的是练习借用与替换；到 Web 阶段，`MonitorRepository` 才会升级为异步接口，并真正隐藏 `RwLock`、migration、SQL 和行映射。
 
+## 对象安全：一个会一直跟到 Web 阶段的决定
+
+`dyn Trait` 只接受“对象安全”的方法：不能有泛型参数，不能返回 `Self`，也不能是 `async fn`。这解释了本阶段练习里那个看起来别扭的签名——返回 `Option<&Target>` 而不是 `Target`，恰好也是为了让 `dyn` 可用。
+
+到异步存储阶段，这个限制会真正咬人：`async fn` 既不是对象安全的，它的 future 也不满足 `Send`，而 axum 的 handler 必须 `Send`。届时有两种出路——把 future 装箱（`#[async_trait]` 做的就是这件事，每次调用多一次分配），或者放弃 `dyn`、改用泛型参数。本项目选择后者，见 `docs/adr/0017`。
+
+所以这一节的完成标准里，对象安全不是背景知识，而是你以后每次写 `dyn` 都要先算的一笔账。
+
 ```sh
 cd exercises
 rustlings run 05_repository
 ```
 
-先让练习失败，再按“方向 → API → 形状”三层提示修复。完成标准：能在不 clone `Target` 的情况下替换数据来源，并解释对象安全（object safety）为什么会影响 `dyn Trait` 的方法形状。
+先让练习失败，再按“方向 → API → 形状”三层提示修复。完成标准：能在不 clone `Target` 的情况下替换数据来源，并解释对象安全为什么会影响 `dyn Trait` 的方法形状。

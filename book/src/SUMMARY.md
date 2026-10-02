@@ -2,6 +2,7 @@
 
 [欢迎回来](./README.md)
 - [30–40 小时标准路径](./guided/standard-path.md)
+- [用 AI 助手当教练，而不是答案机](./guided/ai-tutor.md)
 
 # 所有权样章
 
