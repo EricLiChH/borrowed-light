@@ -50,3 +50,7 @@
 - [对象安全：`dyn` 为什么拒绝 `async fn`](./recipes/object-safety.md)
 - [NonZero：让非法值无法被构造](./recipes/nonzero-and-newtypes.md)
 - [进阶练习的三层提示](./guided/advanced-hints.md)
+
+# 速查
+
+- [Rust 语法速查](./reference/syntax.md)
