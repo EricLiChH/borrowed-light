@@ -47,4 +47,6 @@
 - [Send / Sync：异步任务为什么拒绝这个值](./recipes/send-sync.md)
 - [Axum State：共享状态放在哪里](./recipes/axum-state.md)
 - [SQLite 内存测试：为什么数据突然消失](./recipes/sqlite-memory.md)
+- [对象安全：`dyn` 为什么拒绝 `async fn`](./recipes/object-safety.md)
+- [NonZero：让非法值无法被构造](./recipes/nonzero-and-newtypes.md)
 - [进阶练习的三层提示](./guided/advanced-hints.md)

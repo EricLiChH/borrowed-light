@@ -10,5 +10,7 @@
 | future is not `Send` | [`Send` / `Sync`](send-sync.md) |
 | Axum handler 需要共享数据 | [Axum State](axum-state.md) |
 | SQLite 内存表偶尔不存在 | [SQLite 内存测试](sqlite-memory.md) |
+| `the trait cannot be made into an object`、`E0038` | [对象安全：`dyn` 与 `async fn`](object-safety.md) |
+| 构造函数只为拒绝一个“零”而返回 `Result` | [NonZero：让非法值无法被构造](nonzero-and-newtypes.md) |
 
 每个配方都按“意图 → 最小失败 → 判断问题 → 修复选择”组织。修复目标不是让编译器闭嘴，而是让接口表达真实所有权意图。
